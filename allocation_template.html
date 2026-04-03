@@ -1,0 +1,2678 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>INEOS Grenadier — Vehicle Allocation Tool</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.min.js"></script>
+<style>
+:root{--onyx:#1D1D1D;--charcoal:#171717;--flare:#FF4639;--mush:#D9D7D0;--mush-lt:#FAFAF9;--iron:#606060;--silver:#9F9F9F;--dove:#E9E8E5;--alab:#E3E1DC;--ok:#2C931E;--err:#8B1A1A;--warn:#9A6B00;--bg:#F5F4F2;
+--c-ctr:#2C931E;--c-ne:#534AB7;--c-se:#185FA5;--c-w:#BA7517}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--onyx);-webkit-font-smoothing:antialiased;font-size:13px}
+.hd{background:var(--charcoal);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.hd .logo{color:var(--flare);font-weight:700;font-size:13px;letter-spacing:2px}
+.hd .sub{color:var(--silver);font-size:11px;margin-top:1px}
+.hd .ts{color:var(--silver);font-size:10px;text-align:right}
+.tabs{display:flex;gap:0;background:var(--charcoal);padding:0 28px;border-bottom:1px solid #333}
+.tab{padding:9px 18px;color:var(--silver);font-size:12px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap}
+.tab:hover{color:#fff}
+.tab.on{color:#fff;border-bottom-color:var(--flare)}
+.wrap{max-width:1920px;margin:0 auto;padding:20px 32px}
+.page{display:none}.page.on{display:block}
+.card{background:#fff;border-radius:8px;border:1px solid var(--dove);padding:16px;margin-bottom:16px;overflow-x:auto}
+.card-t{font-size:11px;font-weight:700;color:var(--iron);text-transform:uppercase;letter-spacing:.7px;margin-bottom:12px}
+.krow{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:#fff;border-radius:8px;padding:14px 16px;border:1px solid var(--dove);position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--dove)}
+.kpi.a::before{background:var(--flare)}
+.kpi-l{font-size:10px;font-weight:600;color:var(--iron);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
+.kpi-v{font-size:24px;font-weight:700;color:var(--onyx);letter-spacing:-.3px}
+.kpi-s{font-size:10px;color:var(--silver);margin-top:2px}
+table{width:100%;border-collapse:collapse;font-size:11px;white-space:nowrap}
+th{text-align:left;padding:6px 7px;font-weight:600;color:#fff;text-transform:uppercase;font-size:9px;letter-spacing:.5px;border-bottom:none;position:sticky;top:0;background:var(--charcoal);z-index:1}
+th.r,td.r{text-align:right}th.c,td.c{text-align:center}
+td{padding:5px 7px;border-bottom:1px solid #eeedea}
+tr:hover td{background:#f0efeb}
+tr.z td{background:#fafaf8}
+tr.grp td{font-weight:700;font-size:10px;letter-spacing:.3px;padding:6px 7px;border-bottom:none;color:#fff}
+tr.grp-ctr td{background:#27500A}tr.grp-ne td{background:#3C3489}tr.grp-se td{background:#0C447C}tr.grp-w td{background:#633806}
+tr.tot td{background:var(--onyx)!important;color:#fff;font-weight:700;border-bottom:none}
+.mkt{display:inline-block;padding:2px 7px;border-radius:3px;font-size:9px;font-weight:600}
+.m-ctr{background:#EAF3DE;color:#27500A}.m-ne{background:#EEEDFE;color:#3C3489}
+.m-se{background:#E6F1FB;color:#0C447C}.m-w{background:#FAEEDA;color:#633806}
+.ds-good{background:#e8f5e2;color:#165A0F;font-weight:600;padding:1px 6px;border-radius:10px;font-size:10px}
+.ds-warn{background:#fef5e0;color:#6B4F0A;font-weight:600;padding:1px 6px;border-radius:10px;font-size:10px}
+.ds-bad{background:#fde8e8;color:#6B1515;font-weight:600;padding:1px 6px;border-radius:10px;font-size:10px}
+.dim{color:#ccc}
+.tscroll{max-height:600px;overflow-y:auto}
+
+/* Upload area */
+.upload-zone{border:2px dashed var(--dove);border-radius:8px;padding:40px 20px;text-align:center;cursor:pointer;transition:all .2s;background:#fff}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--flare);background:#fff5f4}
+.upload-zone p{color:var(--iron);font-size:12px;margin-bottom:8px}
+.upload-zone .icon{font-size:28px;color:var(--silver);margin-bottom:8px}
+.upload-zone input[type=file]{display:none}
+
+/* Paste area */
+.paste-area{width:100%;min-height:80px;border:1px solid var(--dove);border-radius:6px;padding:10px;font-family:monospace;font-size:11px;resize:vertical;margin-top:8px}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:none;transition:all .15s}
+.btn-primary{background:var(--flare);color:#fff}.btn-primary:hover{background:#e03e32}
+.btn-secondary{background:var(--onyx);color:#fff}.btn-secondary:hover{background:#333}
+.btn-outline{background:#fff;color:var(--onyx);border:1px solid var(--dove)}.btn-outline:hover{background:var(--mush-lt)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* Settings */
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.setting{background:#fff;border:1px solid var(--dove);border-radius:8px;padding:14px}
+.setting label{font-size:10px;font-weight:600;color:var(--iron);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px}
+.setting input[type=range]{width:100%;margin:4px 0}
+.setting .val{font-size:18px;font-weight:700;color:var(--onyx)}
+.setting input[type=number]{width:80px;padding:4px 8px;border:1px solid var(--dove);border-radius:4px;font-size:13px;font-weight:600}
+
+/* Results highlight */
+.alloc-dealer{background:#e8f5e2;font-weight:600;padding:1px 6px;border-radius:10px;font-size:10px}
+
+/* Checkbox */
+.cb{width:15px;height:15px;cursor:pointer}
+
+/* Frow */
+.frow{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.frow label{font-size:10px;font-weight:600;color:var(--iron);text-transform:uppercase;letter-spacing:.4px}
+.frow select{padding:5px 10px;border:1px solid var(--dove);border-radius:5px;font-size:11px;background:#fff}
+
+/* Badge */
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600}
+.badge-ok{background:#e8f5e2;color:#165A0F}
+.badge-warn{background:#fef5e0;color:#6B4F0A}
+.badge-err{background:#fde8e8;color:#6B1515}
+.badge-info{background:#EEEDFE;color:#3C3489}
+
+/* Two-col layout */
+.gr2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:900px){.gr2,.settings-grid{grid-template-columns:1fr}}
+
+/* Progress */
+.progress-wrap{display:none;margin:12px 0}
+.progress-bar{height:6px;background:#eeedea;border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;background:var(--flare);border-radius:3px;transition:width .2s}
+
+/* Audit trail */
+.audit-row{cursor:pointer}.audit-row:hover td{background:#f0f8ec!important}
+.audit-detail{display:none;background:#fafaf9}
+.audit-detail td{padding:8px 12px;border-bottom:1px solid #eee}
+.factor-bar{display:inline-block;height:10px;border-radius:2px;margin-right:4px;vertical-align:middle}
+.factor-ms{background:#2C931E}.factor-tr{background:#534AB7}.factor-sn{background:#185FA5}
+.factor-pa{background:#BA7517}.factor-pc{background:#D85A30}.factor-st{background:#993556}.factor-ds{background:#4A90D9}
+.score-legend{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0;font-size:10px}
+.score-legend span{display:inline-flex;align-items:center;gap:3px}
+.score-legend .dot{width:8px;height:8px;border-radius:2px;display:inline-block}
+
+/* Exclusion tags */
+.excl-tag{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:600;background:#fde8e8;color:#6B1515;margin:2px}
+.excl-tag .x{cursor:pointer;font-weight:700}
+.pin-tag{background:#e8f5e2;color:#165A0F}
+
+/* Email output */
+.email-card{background:#fff;border:1px solid var(--dove);border-radius:8px;margin-bottom:20px;overflow:hidden}
+.email-header{background:var(--charcoal);color:#fff;padding:10px 16px;display:flex;justify-content:space-between;align-items:center}
+.email-header .dealer-name{font-weight:700;font-size:13px}
+.email-header .unit-count{font-size:11px;color:var(--silver)}
+.email-body{padding:16px;font-size:12px;line-height:1.6;color:var(--onyx)}
+.email-body p{margin-bottom:10px}
+.email-body table{margin:12px 0}
+.email-actions{padding:10px 16px;background:var(--mush-lt);border-top:1px solid var(--dove);display:flex;gap:8px}
+.copy-msg{font-size:10px;color:var(--ok);margin-left:8px;opacity:0;transition:opacity .3s}
+.copy-msg.show{opacity:1}
+
+/* Scenario */
+.scenario-col{border:2px solid var(--dove);border-radius:8px;padding:12px;background:#fff}
+.scenario-col.active{border-color:var(--flare)}
+.scenario-label{font-size:10px;font-weight:700;color:var(--iron);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+
+/* ETA timeline */
+.eta-bar{display:flex;align-items:flex-end;gap:1px;height:60px}
+.eta-col{background:var(--flare);border-radius:2px 2px 0 0;min-width:18px;position:relative;transition:height .3s}
+.eta-col:hover{opacity:.8}
+.eta-label{font-size:8px;color:var(--silver);text-align:center;margin-top:2px;writing-mode:vertical-rl;transform:rotate(180deg)}
+
+/* Chart-like breakdown */
+.breakdown-bar{display:flex;height:20px;border-radius:4px;overflow:hidden;margin:4px 0}
+.breakdown-seg{transition:width .3s;min-width:1px}
+</style>
+</head>
+<body>
+
+<div class="hd">
+ <div>
+  <div class="logo">INEOS GRENADIER</div>
+  <div class="sub">Vehicle Allocation Tool</div>
+ </div>
+ <div class="ts" id="tsLabel"></div>
+</div>
+
+<div class="tabs">
+ <div class="tab on" onclick="showTab(0)">Vehicle Pool</div>
+ <div class="tab" onclick="showTab(1)">Dealer Overview</div>
+ <div class="tab" onclick="showTab(2)">Allocation</div>
+ <div class="tab" onclick="showTab(3)" id="tabEmail" style="display:none">Email Output</div>
+</div>
+
+<div class="wrap">
+
+<!-- ===== TAB 0: VEHICLE POOL ===== -->
+<div class="page on" id="pg0">
+
+ <div class="krow" id="poolKpis">
+  <div class="kpi a"><div class="kpi-l">Uploaded VINs</div><div class="kpi-v" id="kUploadCount">0</div><div class="kpi-s">from file or paste</div></div>
+  <div class="kpi"><div class="kpi-l">Matched</div><div class="kpi-v" id="kMatchCount">0</div><div class="kpi-s">found in vehicle data</div></div>
+  <div class="kpi"><div class="kpi-l">Unmatched</div><div class="kpi-v" id="kUnmatchCount">0</div><div class="kpi-s">VINs not found</div></div>
+  <div class="kpi"><div class="kpi-l">Selected</div><div class="kpi-v" id="kSelCount">0</div><div class="kpi-s">for allocation</div></div>
+  <div class="kpi"><div class="kpi-l">Pinned</div><div class="kpi-v" id="kPinCount">0</div><div class="kpi-s">manual assignments</div></div>
+ </div>
+
+ <div class="gr2">
+  <div class="card">
+   <div class="card-t">Upload VIN List</div>
+   <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+    <div class="icon">&#128196;</div>
+    <p>Drop a CSV or text file here, or click to browse</p>
+    <p style="font-size:10px;color:var(--silver)">One VIN per line, or comma-separated</p>
+    <input type="file" id="fileInput" accept=".csv,.txt,.xlsx">
+   </div>
+   <div style="text-align:center;padding:10px 0;color:var(--silver);font-size:11px">— or paste VINs below —</div>
+   <textarea class="paste-area" id="pasteArea" placeholder="Paste VINs here (one per line or comma-separated)..."></textarea>
+   <div style="margin-top:10px;display:flex;gap:8px">
+    <button class="btn btn-primary" onclick="processVins()">Load VINs</button>
+    <button class="btn btn-outline" onclick="clearVins()">Clear</button>
+   </div>
+  </div>
+  <div>
+   <div class="card">
+    <div class="card-t">Unmatched VINs</div>
+    <div id="unmatchedList" style="font-family:monospace;font-size:11px;color:var(--err);max-height:150px;overflow-y:auto">
+     <span style="color:var(--silver)">Upload VINs to see results...</span>
+    </div>
+   </div>
+   <div class="card">
+    <div class="card-t">Dealer Exclusions & Pin Assignments</div>
+    <div style="margin-bottom:8px">
+     <label style="font-size:10px;font-weight:600;color:var(--iron);text-transform:uppercase">Exclude Dealers:</label>
+     <div style="display:flex;gap:4px;margin-top:4px">
+      <select id="exclDealerSel" style="flex:1;padding:4px 8px;border:1px solid var(--dove);border-radius:4px;font-size:11px"></select>
+      <button class="btn btn-outline" style="padding:3px 10px;font-size:10px" onclick="addExclusion()">Exclude</button>
+     </div>
+     <div id="exclTags" style="margin-top:6px"></div>
+    </div>
+    <div>
+     <label style="font-size:10px;font-weight:600;color:var(--iron);text-transform:uppercase">Pin VIN to Dealer:</label>
+     <div style="display:flex;gap:4px;margin-top:4px">
+      <input id="pinVinInput" placeholder="VIN" style="width:160px;padding:4px 8px;border:1px solid var(--dove);border-radius:4px;font-size:10px;font-family:monospace">
+      <select id="pinDealerSel" style="flex:1;padding:4px 8px;border:1px solid var(--dove);border-radius:4px;font-size:11px"></select>
+      <button class="btn btn-outline" style="padding:3px 10px;font-size:10px" onclick="addPin()">Pin</button>
+     </div>
+     <div id="pinTags" style="margin-top:6px"></div>
+    </div>
+   </div>
+  </div>
+ </div>
+
+ <div class="card">
+  <div class="card-t">
+   Matched Vehicles
+   <span style="float:right">
+    <button class="btn btn-outline" style="padding:3px 10px;font-size:10px" onclick="selectAllVins(true)">Select All</button>
+    <button class="btn btn-outline" style="padding:3px 10px;font-size:10px" onclick="selectAllVins(false)">Deselect All</button>
+   </span>
+  </div>
+  <div class="frow">
+   <label>Filter:</label>
+   <select id="fMY" onchange="filterPool()"><option value="">All MY</option></select>
+   <select id="fBody" onchange="filterPool()"><option value="">All Body</option></select>
+   <select id="fTrim" onchange="filterPool()"><option value="">All Trim</option></select>
+   <select id="fColor" onchange="filterPool()"><option value="">All Color</option></select>
+  </div>
+  <div class="tscroll">
+   <table id="poolTable">
+    <thead><tr>
+     <th class="c"><input type="checkbox" class="cb" id="cbAll" onchange="selectAllVins(this.checked)"></th>
+     <th>VIN</th><th>MY</th><th>Body</th><th>Trim</th><th>Color</th><th>Pack</th>
+     <th>Seats</th><th>Wheels</th><th class="r">MSRP</th><th>Status</th><th>Channel</th><th>Current Dealer</th>
+    </tr></thead>
+    <tbody id="poolBody"></tbody>
+   </table>
+  </div>
+ </div>
+</div>
+
+<!-- ===== TAB 1: DEALER OVERVIEW ===== -->
+<div class="page" id="pg1">
+
+ <div class="krow" id="dealerKpis">
+  <div class="kpi a"><div class="kpi-l">US Dealers</div><div class="kpi-v" id="kDealerCount">0</div></div>
+  <div class="kpi"><div class="kpi-l">Total OG Inventory</div><div class="kpi-v" id="kTotalOG">0</div></div>
+  <div class="kpi"><div class="kpi-l">Blended Avg Month Supply</div><div class="kpi-v" id="kAvgMS">0</div><div class="kpi-s">days</div></div>
+  <div class="kpi"><div class="kpi-l">Network Avg Turn (Blended)</div><div class="kpi-v" id="kAvgTurn">0</div><div class="kpi-s">units/month</div></div>
+ </div>
+
+ <div class="card">
+  <div class="card-t">Dealer Metrics (US Only)</div>
+  <div class="frow">
+   <label>Market:</label>
+   <select id="fDlrMkt" onchange="filterDealers()">
+    <option value="">All Markets</option>
+    <option value="Central">Central</option>
+    <option value="Northeast">Northeast</option>
+    <option value="Southeast">Southeast</option>
+    <option value="Western">Western</option>
+   </select>
+  </div>
+  <div class="tscroll" style="max-height:700px">
+   <table id="dealerTable">
+    <thead><tr>
+     <th>Market</th><th>Dealer</th><th class="r">OG</th>
+     <th class="r" id="thPeriodA">Period A Avg</th><th class="r" id="thPeriodB">Period B Avg</th><th class="r">Blended Avg</th>
+     <th class="r">Month Supply</th><th class="r">Turn Rate</th>
+     <th class="r" id="thSonA">SoN A</th><th class="r" id="thSonB">SoN B</th><th class="r">SoN Blend</th>
+     <th class="r">YTD HO</th>
+    </tr></thead>
+    <tbody id="dealerBody"></tbody>
+   </table>
+  </div>
+ </div>
+</div>
+
+<!-- ===== TAB 2: ALLOCATION ===== -->
+<div class="page" id="pg2">
+
+ <div class="card">
+  <div class="card-t">Allocation Settings</div>
+  <div class="settings-grid">
+   <div class="setting" style="grid-column:1/-1;background:#f8f7f5;border:2px solid var(--dove)">
+    <label style="font-size:11px;color:var(--onyx)">Time Period Weighting</label>
+    <div style="display:flex;gap:24px;align-items:center;margin-top:6px">
+     <div style="flex:1">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+       <label>Period A:</label>
+       <input type="number" id="sPeriodA" value="90" min="7" max="365" step="1" style="width:60px;padding:4px 6px;border:1px solid var(--dove);border-radius:4px;font-size:12px;font-weight:700" onchange="updatePeriodWeights()">
+       <label style="margin:0">days</label>
+      </div>
+      <label>Weight: <span class="val" id="vW90">50</span>%</label>
+      <input type="range" id="sW90" min="0" max="100" value="50" oninput="updatePeriodWeights()">
+      <div style="font-size:10px;color:var(--silver)">Short-term / recent performance</div>
+     </div>
+     <div style="flex:1">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+       <label>Period B:</label>
+       <input type="number" id="sPeriodB" value="180" min="7" max="365" step="1" style="width:60px;padding:4px 6px;border:1px solid var(--dove);border-radius:4px;font-size:12px;font-weight:700" onchange="updatePeriodWeights()">
+       <label style="margin:0">days</label>
+      </div>
+      <label>Weight: <span class="val" id="vW6m">50</span>%</label>
+      <input type="range" id="sW6m" min="0" max="100" value="50" oninput="updatePeriodWeights()">
+      <div style="font-size:10px;color:var(--silver)">Longer-term trend</div>
+     </div>
+    </div>
+    <div style="font-size:10px;color:var(--iron);margin-top:6px">Set any two time windows (7–365 days) and blend them with adjustable weights. Sales data is interpolated from cumulative breakpoints at 30/60/90/120/150/180/270/365 days.</div>
+   </div>
+   <div class="setting">
+    <label>Target Month Supply (days)</label>
+    <input type="number" id="sTargetMS" value="60" min="15" max="180" step="5">
+   </div>
+   <div class="setting">
+    <label>Min Vehicles Per Dealer (0 = no minimum)</label>
+    <input type="number" id="sMinPerDealer" value="0" min="0" max="20" step="1">
+    <div style="font-size:10px;color:var(--silver);margin-top:2px">Guarantee each eligible dealer gets at least this many before open scoring</div>
+   </div>
+   <div class="setting">
+    <label>Max Vehicles Per Dealer (0 = no limit)</label>
+    <input type="number" id="sMaxPerDealer" value="0" min="0" max="50">
+   </div>
+   <div class="setting" style="grid-column:1/-1;background:#fef8ec;border:2px solid #e8d9b0">
+    <div style="display:flex;align-items:center;gap:12px">
+     <label style="cursor:pointer;display:flex;align-items:center;gap:6px;margin:0">
+      <input type="checkbox" id="sNeedsBased" style="width:16px;height:16px;cursor:pointer">
+      <span style="font-size:12px;font-weight:700;color:var(--onyx);text-transform:none;letter-spacing:0">Needs-Based Allocation</span>
+     </label>
+     <span style="font-size:10px;color:var(--iron)">Only allocate the number of vehicles needed to bring dealers up to the target month supply. Unneeded vehicles are left in the pool.</span>
+    </div>
+    <div id="needsInfo" style="display:none;margin-top:8px;padding:8px 10px;background:#fff;border-radius:6px;border:1px solid #e8d9b0">
+     <div style="font-size:11px;font-weight:600;color:var(--onyx)" id="needsSummary"></div>
+    </div>
+   </div>
+   <div class="setting">
+    <label>Month Supply Weight: <span class="val" id="vMS">40</span>%</label>
+    <input type="range" id="sMS" min="0" max="100" value="40" oninput="updateWeights()">
+    <div style="font-size:10px;color:var(--silver)">Dealers below target month supply get priority</div>
+   </div>
+   <div class="setting">
+    <label>Turn Rate Weight: <span class="val" id="vTR">30</span>%</label>
+    <input type="range" id="sTR" min="0" max="100" value="30" oninput="updateWeights()">
+    <div style="font-size:10px;color:var(--silver)">Faster-turning dealers score higher</div>
+   </div>
+   <div class="setting">
+    <label>Share of Nation Weight: <span class="val" id="vSN">30</span>%</label>
+    <input type="range" id="sSN" min="0" max="100" value="30" oninput="updateWeights()">
+    <div style="font-size:10px;color:var(--silver)">Proportional allocation by SoN %</div>
+   </div>
+   <div class="setting" style="grid-column:1/-1;background:#f0f8ec;border:2px solid #c5dfc0">
+    <label style="font-size:11px;color:var(--onyx)">Smart Matching Factors</label>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:16px;margin-top:8px">
+     <div>
+      <label>Plant Affinity: <span class="val" id="vPA">25</span>%</label>
+      <input type="range" id="sPA" min="0" max="100" value="25" oninput="updateWeights()">
+      <div style="margin-top:4px">
+       <select id="sPlantMode" style="width:100%;padding:4px 6px;border:1px solid var(--dove);border-radius:4px;font-size:10px;font-weight:600">
+        <option value="reward">Reward (soft bonus for matching plant)</option>
+        <option value="prefer">Prefer (strong bonus for match, mild penalty for cross-plant)</option>
+        <option value="penalize">Penalize (heavy penalty for cross-plant shipments)</option>
+        <option value="coastblock">Block Cross-Coast (East/West coast hard block, same coast OK)</option>
+        <option value="require">Require (hard block — only matching plant dealers)</option>
+       </select>
+      </div>
+      <div style="font-size:10px;color:var(--silver);margin-top:3px">Controls how strictly vehicles are routed to their servicing plant's dealers</div>
+     </div>
+     <div>
+      <label>Pipeline Complement: <span class="val" id="vPC">25</span>%</label>
+      <input type="range" id="sPC" min="0" max="100" value="25" oninput="updateWeights()">
+      <div style="font-size:10px;color:var(--silver)">Avoid over-concentrating same body/trim/color</div>
+     </div>
+     <div>
+      <label>Sell-Through Fit: <span class="val" id="vST">25</span>%</label>
+      <input type="range" id="sST" min="0" max="100" value="25" oninput="updateWeights()">
+      <div style="font-size:10px;color:var(--silver)">Favor dealers who historically sell this config well</div>
+     </div>
+     <div>
+      <label>Days-to-Sale Speed: <span class="val" id="vDS">20</span>%</label>
+      <input type="range" id="sDS" min="0" max="100" value="20" oninput="updateWeights()">
+      <div style="font-size:10px;color:var(--silver)">Favor dealers who sell this config faster than network avg</div>
+     </div>
+    </div>
+    <div style="font-size:10px;color:var(--iron);margin-top:8px">These factors are combined with the demand factors above. All weights are normalized together to 100%.</div>
+   </div>
+   <div class="setting" style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
+    <button class="btn btn-primary" id="btnRun" onclick="runAllocation()" disabled>Run Allocation</button>
+    <button class="btn btn-outline" id="btnSaveA" onclick="saveScenario('A')" disabled>Save as Scenario A</button>
+    <button class="btn btn-outline" id="btnSaveB" onclick="saveScenario('B')" disabled>Save as Scenario B</button>
+    <button class="btn btn-outline" id="btnCompare" onclick="showComparison()" disabled style="border-color:var(--flare);color:var(--flare)">Compare A vs B</button>
+    <button class="btn btn-secondary" id="btnExport" onclick="exportExcel()" disabled>Export to Excel</button>
+    <span id="allocStatus" style="font-size:11px;color:var(--silver)"></span>
+   </div>
+  </div>
+  <div class="progress-wrap" id="progressWrap">
+   <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+  </div>
+ </div>
+
+ <div class="krow" id="allocKpis" style="display:none">
+  <div class="kpi a"><div class="kpi-l">Vehicles Allocated</div><div class="kpi-v" id="kAllocated">0</div></div>
+  <div class="kpi"><div class="kpi-l">Left in Pool</div><div class="kpi-v" id="kUnallocated">0</div><div class="kpi-s">not needed / unassigned</div></div>
+  <div class="kpi"><div class="kpi-l">Dealers Receiving</div><div class="kpi-v" id="kDealersReceiving">0</div></div>
+  <div class="kpi"><div class="kpi-l">Avg Score</div><div class="kpi-v" id="kAvgScore">0</div></div>
+  <div class="kpi"><div class="kpi-l">New Avg Month Supply</div><div class="kpi-v" id="kNewAvgMS">0</div><div class="kpi-s">days (projected)</div></div>
+ </div>
+
+ <div class="card" id="resultsCard" style="display:none">
+  <div class="card-t">Allocation Results</div>
+  <div class="tscroll" style="max-height:700px">
+   <table id="resultsTable">
+    <thead><tr>
+     <th>VIN</th><th>MY</th><th>Body</th><th>Trim</th><th>Color</th><th class="r">MSRP</th>
+     <th>Allocated Dealer</th><th>Market</th><th class="r">Score</th>
+     <th class="r">Dealer OG Before</th><th class="r">Dealer MS Before</th>
+    </tr></thead>
+    <tbody id="resultsBody"></tbody>
+   </table>
+  </div>
+ </div>
+
+ <div class="card" id="dealerSummaryCard" style="display:none">
+  <div class="card-t">Dealer Allocation Summary</div>
+  <div class="tscroll">
+   <table id="summaryTable">
+    <thead><tr>
+     <th>Market</th><th>Dealer</th><th class="r">Current OG</th><th class="r">Allocated</th>
+     <th class="r">New OG</th><th class="r">Current MS</th><th class="r">New MS</th>
+     <th class="r">Turn Rate</th><th class="r">SoN %</th>
+    </tr></thead>
+    <tbody id="summaryBody"></tbody>
+   </table>
+  </div>
+ </div>
+
+ <!-- SCORE BREAKDOWN VISUALIZATION -->
+ <div class="card" id="breakdownCard" style="display:none">
+  <div class="card-t">Factor Contribution Breakdown</div>
+  <div class="score-legend">
+   <span><span class="dot factor-ms"></span> Month Supply</span>
+   <span><span class="dot factor-tr"></span> Turn Rate</span>
+   <span><span class="dot factor-sn"></span> Share of Nation</span>
+   <span><span class="dot factor-pa"></span> Plant Affinity</span>
+   <span><span class="dot factor-pc"></span> Pipeline Complement</span>
+   <span><span class="dot factor-st"></span> Sell-Through Fit</span>
+   <span><span class="dot factor-ds"></span> Days-to-Sale</span>
+  </div>
+  <div id="breakdownContent"></div>
+ </div>
+
+ <!-- ALLOCATION AUDIT TRAIL -->
+ <div class="card" id="auditCard" style="display:none">
+  <div class="card-t">Allocation Audit Trail <span style="font-weight:400;text-transform:none;color:var(--silver)">(click a row to see top 5 candidates)</span></div>
+  <div class="tscroll" style="max-height:700px">
+   <table id="auditTable">
+    <thead><tr>
+     <th>VIN</th><th>Config</th><th>Plant</th><th>Allocated To</th><th class="r">Score</th>
+     <th class="r">MS</th><th class="r">TR</th><th class="r">SoN</th>
+     <th class="r">Plant</th><th class="r">Compl</th><th class="r">S-Thru</th><th class="r">DtS</th>
+     <th>Factor Breakdown</th>
+    </tr></thead>
+    <tbody id="auditBody"></tbody>
+   </table>
+  </div>
+ </div>
+
+ <!-- ETA TIMELINE -->
+ <div class="card" id="etaCard" style="display:none">
+  <div class="card-t">ETA Timeline — Allocated Vehicles by Arrival Period</div>
+  <div id="etaContent"></div>
+ </div>
+
+ <!-- SCENARIO COMPARISON -->
+ <div class="card" id="scenarioCard" style="display:none">
+  <div class="card-t">Scenario Comparison: A vs B</div>
+  <div class="gr2" id="scenarioContent"></div>
+ </div>
+</div>
+
+<!-- ===== TAB 3: EMAIL OUTPUT ===== -->
+<div class="page" id="pg3">
+ <div class="krow">
+  <div class="kpi a"><div class="kpi-l">Dealer Emails</div><div class="kpi-v" id="kEmailCount">0</div></div>
+  <div class="kpi"><div class="kpi-l">Total Vehicles</div><div class="kpi-v" id="kEmailVehicles">0</div></div>
+ </div>
+
+ <div class="card" style="margin-bottom:16px">
+  <div class="card-t">Email Template Settings</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px">
+   <div>
+    <label style="font-size:10px;font-weight:600;color:var(--iron);text-transform:uppercase;display:block;margin-bottom:4px">Sender Name</label>
+    <input type="text" id="emailSender" value="[RBM Name]" style="width:100%;padding:6px 10px;border:1px solid var(--dove);border-radius:4px;font-size:12px">
+   </div>
+   <div>
+    <label style="font-size:10px;font-weight:600;color:var(--iron);text-transform:uppercase;display:block;margin-bottom:4px">Allocation Name</label>
+    <input type="text" id="emailAllocName" value="Secondary Allocation" style="width:100%;padding:6px 10px;border:1px solid var(--dove);border-radius:4px;font-size:12px">
+   </div>
+   <div>
+    <label style="font-size:10px;font-weight:600;color:var(--iron);text-transform:uppercase;display:block;margin-bottom:4px">Allocation Start Date</label>
+    <input type="date" id="emailStartDate" style="width:100%;padding:6px 10px;border:1px solid var(--dove);border-radius:4px;font-size:12px">
+   </div>
+   <div>
+    <label style="font-size:10px;font-weight:600;color:var(--iron);text-transform:uppercase;display:block;margin-bottom:4px">Allocation End Date</label>
+    <input type="date" id="emailEndDate" style="width:100%;padding:6px 10px;border:1px solid var(--dove);border-radius:4px;font-size:12px">
+   </div>
+  </div>
+  <div style="margin-top:8px">
+   <label style="font-size:10px;font-weight:600;color:var(--iron);text-transform:uppercase;display:block;margin-bottom:4px">Custom Message (optional — appears after vehicle table)</label>
+   <textarea id="emailCustomMsg" rows="2" style="width:100%;padding:6px 10px;border:1px solid var(--dove);border-radius:4px;font-size:12px;resize:vertical" placeholder="e.g. Please confirm acceptance within 48 hours..."></textarea>
+  </div>
+  <div style="margin-top:10px">
+   <button class="btn btn-primary" onclick="renderEmails()">Generate Emails</button>
+   <button class="btn btn-outline" onclick="copyAllEmails()" style="margin-left:6px">Copy All to Clipboard</button>
+   <button class="btn btn-secondary" onclick="exportEmailHTML()" style="margin-left:6px">Export Email HTML File</button>
+  </div>
+ </div>
+
+ <div id="emailContainer"></div>
+</div>
+
+</div><!-- /wrap -->
+
+<script>
+// === DATA INJECTED BY PYTHON ===
+const V_DATA=[];
+const V_DICT={};
+const DEALERS=[];
+const PLANT_AFFINITY={};
+const PIPELINE_COMP={};
+const SELL_THROUGH={};
+const DAYS_TO_SELL={};
+const DATA_TS="";
+
+// === DECODE COMPACT VEHICLES ===
+// V_DATA row format: [vin, so_no, msrp, so_value, dis, eta, vessel,
+//   idx_my, idx_body, idx_status, idx_channel, idx_dealer, idx_stock_cat, idx_plant, idx_material,
+//   idx_trim, idx_pack, idx_color, idx_seats, idx_roof, idx_safari, idx_wheels, idx_tyres,
+//   idx_frame, idx_tow, idx_heated_seats, idx_diff_locks, idx_ladder, idx_aux_battery,
+//   idx_aux_switch, idx_carpet, idx_compass, idx_centre_diff, idx_emerg_safety,
+//   idx_floor_trim, idx_winch, idx_utility_rails, idx_privacy_glass, idx_air_intake,
+//   idx_smokers, idx_spare_wheel, idx_front_tow, idx_bump_strips, idx_steering,
+//   idx_wheel_locks, idx_sound]
+const SPEC_KEYS = ["trim","pack","color","seats","roof","safari","wheels","tyres",
+  "frame","tow","heated_seats","diff_locks","ladder","aux_battery",
+  "aux_switch","carpet","compass","centre_diff","emerg_safety",
+  "floor_trim","winch","utility_rails","privacy_glass","air_intake",
+  "smokers","spare_wheel","front_tow","bump_strips","steering",
+  "wheel_locks","sound"];
+
+function decodeVehicle(row) {
+  const d = V_DICT;
+  const v = {
+    vin: row[0], so_no: row[1], msrp: row[2], so_value: row[3],
+    dis: row[4], eta: row[5], vessel: row[6],
+    my: d.my[row[7]] || "", body: d.body[row[8]] || "",
+    status: d.status[row[9]] || "", channel: d.channel[row[10]] || "",
+    dealer: d.dealer[row[11]] || "", stock_cat: d.stock_cat[row[12]] || "",
+    plant: d.plant[row[13]] || "", material: d.material[row[14]] || ""
+  };
+  for (let i = 0; i < SPEC_KEYS.length; i++) {
+    v[SPEC_KEYS[i]] = d[SPEC_KEYS[i]][row[15 + i]] || "";
+  }
+  return v;
+}
+
+// Build VIN lookup
+const VEHICLES = {};
+V_DATA.forEach(row => { VEHICLES[row[0].toUpperCase()] = row; });
+
+// === STATE ===
+let matchedVehicles = [];
+let selectedVins = new Set();
+let allocationResults = [];
+let allocationAudit = [];      // per-vehicle top-5 candidate breakdowns
+let excludedDealers = new Set();
+let pinnedVins = {};           // { VIN: dealerName }
+let scenarioA = null;
+let scenarioB = null;
+
+// === TIME PERIOD BLENDING (editable windows) ===
+const BREAKPOINTS = [30, 60, 90, 120, 150, 180, 270, 365];
+
+// Interpolate cumulative sales for an arbitrary day window from breakpoint data
+function salesForWindow(cum, days) {
+  if (!cum) return 0;
+  // Keys are strings in JSON, access with String(bp)
+  const g = bp => cum[String(bp)] || cum[bp] || 0;
+  if (days <= BREAKPOINTS[0]) return g(BREAKPOINTS[0]) * (days / BREAKPOINTS[0]);
+  if (days >= BREAKPOINTS[BREAKPOINTS.length - 1]) return g(BREAKPOINTS[BREAKPOINTS.length - 1]);
+  for (let i = 0; i < BREAKPOINTS.length - 1; i++) {
+    const lo = BREAKPOINTS[i], hi = BREAKPOINTS[i + 1];
+    if (days >= lo && days <= hi) {
+      const vLo = g(lo), vHi = g(hi);
+      const frac = (days - lo) / (hi - lo);
+      return vLo + (vHi - vLo) * frac;
+    }
+  }
+  return 0;
+}
+
+// Monthly avg sales for a given day window
+function monthlyAvgForWindow(cum, days) {
+  const totalSales = salesForWindow(cum, days);
+  const months = days / 30;
+  return months > 0 ? totalSales / months : 0;
+}
+
+function getPeriodConfig() {
+  const daysA = Math.max(7, Math.min(365, parseInt(document.getElementById("sPeriodA").value) || 90));
+  const daysB = Math.max(7, Math.min(365, parseInt(document.getElementById("sPeriodB").value) || 180));
+  const wA = parseInt(document.getElementById("sW90").value) || 50;
+  const wB = parseInt(document.getElementById("sW6m").value) || 50;
+  const total = wA + wB || 1;
+  return { daysA, daysB, nA: wA / total, nB: wB / total };
+}
+
+function dealerAvgA(d) { return monthlyAvgForWindow(d.cum, getPeriodConfig().daysA); }
+function dealerAvgB(d) { return monthlyAvgForWindow(d.cum, getPeriodConfig().daysB); }
+
+function blendedAvg(d) {
+  const pc = getPeriodConfig();
+  return monthlyAvgForWindow(d.cum, pc.daysA) * pc.nA + monthlyAvgForWindow(d.cum, pc.daysB) * pc.nB;
+}
+
+function blendedSoN(d) {
+  const pc = getPeriodConfig();
+  const totalA = DEALERS.reduce((s, dl) => s + monthlyAvgForWindow(dl.cum, pc.daysA), 0) || 1;
+  const totalB = DEALERS.reduce((s, dl) => s + monthlyAvgForWindow(dl.cum, pc.daysB), 0) || 1;
+  const sonA = monthlyAvgForWindow(d.cum, pc.daysA) / totalA * 100;
+  const sonB = monthlyAvgForWindow(d.cum, pc.daysB) / totalB * 100;
+  return sonA * pc.nA + sonB * pc.nB;
+}
+
+function dealerSonA(d) {
+  const pc = getPeriodConfig();
+  const total = DEALERS.reduce((s, dl) => s + monthlyAvgForWindow(dl.cum, pc.daysA), 0) || 1;
+  return monthlyAvgForWindow(d.cum, pc.daysA) / total * 100;
+}
+
+function dealerSonB(d) {
+  const pc = getPeriodConfig();
+  const total = DEALERS.reduce((s, dl) => s + monthlyAvgForWindow(dl.cum, pc.daysB), 0) || 1;
+  return monthlyAvgForWindow(d.cum, pc.daysB) / total * 100;
+}
+
+function updatePeriodWeights() {
+  document.getElementById("vW90").textContent = document.getElementById("sW90").value;
+  document.getElementById("vW6m").textContent = document.getElementById("sW6m").value;
+  // Update column headers with current period labels
+  const pc = getPeriodConfig();
+  document.getElementById("thPeriodA").textContent = pc.daysA + "d Avg";
+  document.getElementById("thPeriodB").textContent = pc.daysB + "d Avg";
+  document.getElementById("thSonA").textContent = "SoN " + pc.daysA + "d";
+  document.getElementById("thSonB").textContent = "SoN " + pc.daysB + "d";
+  renderDealerTable();
+  updateDealerKpis();
+}
+
+// === INIT ===
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("tsLabel").textContent = "Data: " + DATA_TS;
+  renderDealerTable();
+  updateDealerKpis();
+  setupDragDrop();
+  updateWeights();
+  updatePeriodWeights();
+  populateDealerDropdowns();
+});
+
+function showTab(n) {
+  document.querySelectorAll(".tab").forEach((t,i) => t.classList.toggle("on", i===n));
+  document.querySelectorAll(".page").forEach((p,i) => p.classList.toggle("on", i===n));
+}
+
+// === VIN UPLOAD ===
+function setupDragDrop() {
+  const zone = document.getElementById("dropZone");
+  zone.addEventListener("dragover", e => { e.preventDefault(); zone.classList.add("drag"); });
+  zone.addEventListener("dragleave", () => zone.classList.remove("drag"));
+  zone.addEventListener("drop", e => {
+    e.preventDefault(); zone.classList.remove("drag");
+    if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+  });
+  document.getElementById("fileInput").addEventListener("change", e => {
+    if (e.target.files.length) handleFile(e.target.files[0]);
+  });
+}
+
+function handleFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById("pasteArea").value = e.target.result;
+    processVins();
+  };
+  reader.readAsText(file);
+}
+
+function processVins() {
+  const raw = document.getElementById("pasteArea").value.trim();
+  if (!raw) return;
+  const vins = raw.split(/[\n,;\s]+/).map(v => v.trim().toUpperCase()).filter(v => v.length >= 10);
+  const uniqueVins = [...new Set(vins)];
+
+  matchedVehicles = [];
+  const unmatched = [];
+  uniqueVins.forEach(vin => {
+    const row = VEHICLES[vin];
+    if (row) {
+      matchedVehicles.push({ ...decodeVehicle(row), _vin: vin });
+    } else {
+      unmatched.push(vin);
+    }
+  });
+
+  selectedVins = new Set(matchedVehicles.map(v => v._vin));
+
+  document.getElementById("kUploadCount").textContent = uniqueVins.length.toLocaleString();
+  document.getElementById("kMatchCount").textContent = matchedVehicles.length.toLocaleString();
+  document.getElementById("kUnmatchCount").textContent = unmatched.length.toLocaleString();
+  updateSelCount();
+
+  // Populate filters
+  populateFilters();
+  renderPoolTable();
+
+  // Show unmatched
+  const ul = document.getElementById("unmatchedList");
+  if (unmatched.length === 0) {
+    ul.innerHTML = '<span style="color:var(--ok)">All VINs matched!</span>';
+  } else {
+    ul.innerHTML = unmatched.map(v => '<div>' + v + '</div>').join('');
+  }
+
+  // Enable allocation
+  document.getElementById("btnRun").disabled = matchedVehicles.length === 0;
+}
+
+function clearVins() {
+  document.getElementById("pasteArea").value = "";
+  matchedVehicles = [];
+  selectedVins.clear();
+  document.getElementById("kUploadCount").textContent = "0";
+  document.getElementById("kMatchCount").textContent = "0";
+  document.getElementById("kUnmatchCount").textContent = "0";
+  updateSelCount();
+  document.getElementById("poolBody").innerHTML = "";
+  document.getElementById("unmatchedList").innerHTML = '<span style="color:var(--silver)">Upload VINs to see results...</span>';
+  document.getElementById("btnRun").disabled = true;
+}
+
+function populateFilters() {
+  const mys = [...new Set(matchedVehicles.map(v => v.my))].sort();
+  const bodies = [...new Set(matchedVehicles.map(v => v.body))].sort();
+  const trims = [...new Set(matchedVehicles.map(v => v.trim))].sort();
+  const colors = [...new Set(matchedVehicles.map(v => v.color))].sort();
+
+  fillSelect("fMY", mys);
+  fillSelect("fBody", bodies);
+  fillSelect("fTrim", trims);
+  fillSelect("fColor", colors);
+}
+
+function fillSelect(id, vals) {
+  const sel = document.getElementById(id);
+  const first = sel.options[0].text;
+  sel.innerHTML = '<option value="">' + first + '</option>' + vals.map(v => '<option value="'+v+'">'+v+'</option>').join('');
+}
+
+function filterPool() {
+  renderPoolTable();
+}
+
+function getFilteredPool() {
+  const fMY = document.getElementById("fMY").value;
+  const fBody = document.getElementById("fBody").value;
+  const fTrim = document.getElementById("fTrim").value;
+  const fColor = document.getElementById("fColor").value;
+  return matchedVehicles.filter(v =>
+    (!fMY || v.my === fMY) &&
+    (!fBody || v.body === fBody) &&
+    (!fTrim || v.trim === fTrim) &&
+    (!fColor || v.color === fColor)
+  );
+}
+
+function renderPoolTable() {
+  const filtered = getFilteredPool();
+  const tbody = document.getElementById("poolBody");
+  tbody.innerHTML = filtered.map((v, i) => {
+    const checked = selectedVins.has(v._vin) ? "checked" : "";
+    const z = i % 2 ? ' class="z"' : '';
+    return '<tr' + z + '>' +
+      '<td class="c"><input type="checkbox" class="cb" data-vin="' + v._vin + '" ' + checked + ' onchange="toggleVin(this)"></td>' +
+      '<td style="font-family:monospace;font-size:10px">' + v.vin + '</td>' +
+      '<td>' + v.my + '</td>' +
+      '<td>' + v.body + '</td>' +
+      '<td>' + v.trim + '</td>' +
+      '<td>' + v.color + '</td>' +
+      '<td>' + (v.pack || '') + '</td>' +
+      '<td>' + (v.seats || '') + '</td>' +
+      '<td>' + (v.wheels || '') + '</td>' +
+      '<td class="r">' + (v.msrp ? '$' + Number(v.msrp).toLocaleString() : '') + '</td>' +
+      '<td>' + (v.status || '') + '</td>' +
+      '<td>' + (v.channel || '') + '</td>' +
+      '<td>' + (v.dealer || '') + '</td>' +
+      '</tr>';
+  }).join('');
+}
+
+function toggleVin(cb) {
+  if (cb.checked) selectedVins.add(cb.dataset.vin);
+  else selectedVins.delete(cb.dataset.vin);
+  updateSelCount();
+}
+
+function selectAllVins(yes) {
+  const filtered = getFilteredPool();
+  filtered.forEach(v => { if (yes) selectedVins.add(v._vin); else selectedVins.delete(v._vin); });
+  document.getElementById("cbAll").checked = yes;
+  renderPoolTable();
+  updateSelCount();
+}
+
+function updateSelCount() {
+  document.getElementById("kSelCount").textContent = selectedVins.size.toLocaleString();
+  document.getElementById("btnRun").disabled = selectedVins.size === 0;
+}
+
+// === EXCLUSION & PINNING ===
+function populateDealerDropdowns() {
+  const names = DEALERS.map(d => d.name).sort();
+  const opts = names.map(n => '<option value="'+n+'">'+n+'</option>').join('');
+  document.getElementById("exclDealerSel").innerHTML = opts;
+  document.getElementById("pinDealerSel").innerHTML = opts;
+}
+
+function addExclusion() {
+  const sel = document.getElementById("exclDealerSel");
+  const name = sel.value;
+  if (!name || excludedDealers.has(name)) return;
+  excludedDealers.add(name);
+  renderExclTags();
+}
+
+function removeExclusion(name) {
+  excludedDealers.delete(name);
+  renderExclTags();
+}
+
+function renderExclTags() {
+  const el = document.getElementById("exclTags");
+  el.innerHTML = [...excludedDealers].map(n =>
+    '<span class="excl-tag">' + n + ' <span class="x" onclick="removeExclusion(\'' + n + '\')">&times;</span></span>'
+  ).join('');
+}
+
+function addPin() {
+  const vin = document.getElementById("pinVinInput").value.trim().toUpperCase();
+  const dealer = document.getElementById("pinDealerSel").value;
+  if (!vin || !dealer) return;
+  // Validate VIN exists in vehicle data
+  if (!VEHICLES[vin]) {
+    alert("VIN " + vin + " not found in vehicle data. Check the VIN and try again.");
+    return;
+  }
+  pinnedVins[vin] = dealer;
+  // Auto-add to selected if not already there
+  if (!selectedVins.has(vin)) {
+    // Check if it's in matchedVehicles
+    const alreadyMatched = matchedVehicles.find(v => v._vin === vin);
+    if (!alreadyMatched) {
+      const row = VEHICLES[vin];
+      matchedVehicles.push({ ...decodeVehicle(row), _vin: vin });
+    }
+    selectedVins.add(vin);
+    updateSelCount();
+    renderPoolTable();
+  }
+  document.getElementById("pinVinInput").value = "";
+  renderPinTags();
+  document.getElementById("kPinCount").textContent = Object.keys(pinnedVins).length;
+}
+
+function removePin(vin) {
+  delete pinnedVins[vin];
+  renderPinTags();
+  document.getElementById("kPinCount").textContent = Object.keys(pinnedVins).length;
+}
+
+function renderPinTags() {
+  const el = document.getElementById("pinTags");
+  el.innerHTML = Object.entries(pinnedVins).map(([v, d]) =>
+    '<span class="excl-tag pin-tag">' + v.substring(0,10) + '...' + ' &rarr; ' + d +
+    ' <span class="x" onclick="removePin(\'' + v + '\')">&times;</span></span>'
+  ).join('');
+}
+
+// === DEALER TABLE ===
+function renderDealerTable() {
+  const mktOrder = ["Central", "Northeast", "Southeast", "Western"];
+  const mktClass = { Central: "grp-ctr", Northeast: "grp-ne", Southeast: "grp-se", Western: "grp-w" };
+  const mktBadge = { Central: "m-ctr", Northeast: "m-ne", Southeast: "m-se", Western: "m-w" };
+
+  const grouped = {};
+  DEALERS.forEach(d => {
+    if (!grouped[d.market]) grouped[d.market] = [];
+    grouped[d.market].push(d);
+  });
+
+  const fMkt = document.getElementById("fDlrMkt").value;
+  const tbody = document.getElementById("dealerBody");
+  let html = "";
+  let idx = 0;
+
+  mktOrder.forEach(mkt => {
+    if (fMkt && fMkt !== mkt) return;
+    if (!grouped[mkt]) return;
+    html += '<tr class="grp ' + (mktClass[mkt]||'') + '"><td colspan="12">' + mkt.toUpperCase() + ' (' + grouped[mkt].length + ' dealers)</td></tr>';
+    grouped[mkt].sort((a,b) => a.name.localeCompare(b.name)).forEach(d => {
+      const z = idx % 2 ? ' class="z"' : '';
+      const avgA = dealerAvgA(d);
+      const avgB = dealerAvgB(d);
+      const bAvg = blendedAvg(d);
+      const bSoN = blendedSoN(d);
+      const sonA = dealerSonA(d);
+      const sonB = dealerSonB(d);
+      const ms = bAvg > 0 ? Math.round(d.og / bAvg * 30) : 999;
+      const msClass = ms <= 45 ? "ds-good" : ms <= 90 ? "ds-warn" : "ds-bad";
+      html += '<tr' + z + '>' +
+        '<td><span class="mkt ' + (mktBadge[mkt]||'') + '">' + mkt + '</span></td>' +
+        '<td>' + d.name + '</td>' +
+        '<td class="r">' + d.og + '</td>' +
+        '<td class="r">' + avgA.toFixed(1) + '</td>' +
+        '<td class="r">' + avgB.toFixed(1) + '</td>' +
+        '<td class="r" style="font-weight:700">' + bAvg.toFixed(1) + '</td>' +
+        '<td class="r"><span class="' + msClass + '">' + ms + 'd</span></td>' +
+        '<td class="r">' + bAvg.toFixed(2) + '</td>' +
+        '<td class="r">' + sonA.toFixed(1) + '%</td>' +
+        '<td class="r">' + sonB.toFixed(1) + '%</td>' +
+        '<td class="r" style="font-weight:700">' + bSoN.toFixed(1) + '%</td>' +
+        '<td class="r">' + d.ytd_ho + '</td>' +
+        '</tr>';
+      idx++;
+    });
+  });
+
+  tbody.innerHTML = html;
+  document.getElementById("kDealerCount").textContent = DEALERS.length;
+}
+
+function filterDealers() { renderDealerTable(); }
+
+function updateDealerKpis() {
+  const totalOG = DEALERS.reduce((s,d) => s + d.og, 0);
+  const totalBlend = DEALERS.reduce((s,d) => s + blendedAvg(d), 0);
+  const avgMS = totalBlend > 0 ? Math.round(totalOG / totalBlend * 30) : 0;
+  const avgTurn = DEALERS.length > 0 ? (totalBlend / DEALERS.length).toFixed(1) : 0;
+  document.getElementById("kTotalOG").textContent = totalOG.toLocaleString();
+  document.getElementById("kAvgMS").textContent = avgMS;
+  document.getElementById("kAvgTurn").textContent = avgTurn;
+}
+
+// === WEIGHTS ===
+function updateWeights() {
+  document.getElementById("vMS").textContent = document.getElementById("sMS").value;
+  document.getElementById("vTR").textContent = document.getElementById("sTR").value;
+  document.getElementById("vSN").textContent = document.getElementById("sSN").value;
+  document.getElementById("vPA").textContent = document.getElementById("sPA").value;
+  document.getElementById("vPC").textContent = document.getElementById("sPC").value;
+  document.getElementById("vST").textContent = document.getElementById("sST").value;
+  document.getElementById("vDS").textContent = document.getElementById("sDS").value;
+}
+
+// === ALLOCATION ===
+function scoreDealerForVehicle(d, veh, params) {
+  const { nMS, nTR, nSN, nPA, nPC, nST, nDS, targetMS, maxTR, maxSoN, plantMode } = params;
+  const vConfigBT = veh.body + "|" + veh.trim;
+  const vConfigBTC = veh.body + "|" + veh.trim + "|" + veh.color;
+  const plantDealers = PLANT_AFFINITY[veh.plant] || {};
+  const plantAffinity = plantDealers[d.name] || 0;
+  const PLANT_THRESHOLD = 0.05;
+  const hasPlantLink = plantAffinity >= PLANT_THRESHOLD;
+  const hasAnyPlantData = Object.keys(plantDealers).length > 0;
+
+  // Coast grouping: P912(Baltimore)+P913(Brunswick)=East, P914(Oxnard)+P915(Tacoma)=West
+  const EAST_PLANTS = ["P912","P913"];
+  const WEST_PLANTS = ["P914","P915"];
+  const vehCoast = EAST_PLANTS.includes(veh.plant) ? "E" : WEST_PLANTS.includes(veh.plant) ? "W" : "";
+  let dealerCoast = "";
+  let bestDlrPlantAff = 0;
+  for (const pp of Object.keys(PLANT_AFFINITY)) {
+    const da = (PLANT_AFFINITY[pp][d.name] || 0);
+    if (da > bestDlrPlantAff) {
+      bestDlrPlantAff = da;
+      dealerCoast = EAST_PLANTS.includes(pp) ? "E" : WEST_PLANTS.includes(pp) ? "W" : "";
+    }
+  }
+  const sameCoast = vehCoast && dealerCoast && vehCoast === dealerCoast;
+  const crossCoast = vehCoast && dealerCoast && vehCoast !== dealerCoast;
+
+  // Plant mode gates
+  if (plantMode === "require" && !hasPlantLink && hasAnyPlantData) {
+    return { score: -Infinity, factors: {ms:0,tr:0,sn:0,pa:0,pc:0,st:0,ds:0}, blocked: true };
+  }
+  if (plantMode === "coastblock" && crossCoast && hasAnyPlantData) {
+    return { score: -Infinity, factors: {ms:0,tr:0,sn:0,pa:0,pc:0,st:0,ds:0}, blocked: true };
+  }
+
+  // F1: Month Supply Need — works whether above or below target
+  const currentMS = d.bAvg > 0 ? (d.og / d.bAvg * 30) : 999;
+  let f_ms;
+  if (currentMS <= targetMS) {
+    f_ms = 0.5 + 0.5 * Math.max(0, targetMS - currentMS) / targetMS;
+  } else {
+    f_ms = Math.max(0, 0.5 * (1 - (currentMS - targetMS) / targetMS));
+  }
+
+  // F2: Turn Rate — normalized 0-1 across network
+  const f_tr = d.bAvg / maxTR;
+
+  // F3: Share of Nation — normalized 0-1 across network
+  const f_sn = d.bSoN / maxSoN;
+
+  // F4: Plant Affinity — scaled to 0-1 range so it competes with other factors
+  const maxPlantAff = hasAnyPlantData ? Math.max(...Object.values(plantDealers)) : 1;
+  const scaledAffinity = hasPlantLink ? plantAffinity / maxPlantAff : 0;
+
+  let f_pa = 0;
+  if (plantMode === "reward") {
+    // Soft: plant-linked = 0.3-1.0; same coast = 0.15; cross coast = 0.05
+    f_pa = hasPlantLink ? 0.3 + 0.7 * scaledAffinity : (sameCoast ? 0.15 : 0.05);
+  } else if (plantMode === "prefer") {
+    // Strong pref: plant-linked = 0.5-1.0; same coast = 0.1; cross coast = -0.3
+    f_pa = hasPlantLink ? 0.5 + 0.5 * scaledAffinity : (sameCoast ? 0.1 : -0.3);
+  } else if (plantMode === "penalize") {
+    // Heavy: plant-linked = 0.5-1.0; same coast = -0.1; cross coast = -0.7
+    f_pa = hasPlantLink ? 0.5 + 0.5 * scaledAffinity : (sameCoast ? -0.1 : -0.7);
+  } else if (plantMode === "coastblock") {
+    // Cross-coast already blocked above; plant-linked = full bonus, same coast = mild bonus
+    f_pa = hasPlantLink ? 0.5 + 0.5 * scaledAffinity : (sameCoast ? 0.2 : 0);
+  } else if (plantMode === "require") {
+    // Hard block already applied above; scored dealers get 0.5-1.0
+    f_pa = scaledAffinity;
+  }
+
+  // F5: Pipeline Complementarity (existing pipeline + batch variety)
+  // Part A: Existing pipeline concentration (same as before but weighted less)
+  const pBT = d.pipelineBT[vConfigBT] || 0;
+  const pBTC = d.pipelineBT[vConfigBTC] || 0;
+  const totalPipeline = d.og + d.allocated;
+  const concBT = totalPipeline > 0 ? pBT / totalPipeline : 0;
+  const concBTC = totalPipeline > 0 ? pBTC / totalPipeline : 0;
+  const pipeScore = Math.max(0, 1 - (concBT * 0.6 + concBTC * 0.4) * 3);
+
+  // Part B: Batch variety — penalize repeating same configs within THIS allocation
+  let batchScore = 1;
+  if (d.allocated > 0) {
+    const bBT = d.batchBT[vConfigBT] || 0;
+    const bBTC = d.batchBTC[vConfigBTC] || 0;
+    const bTrim = d.batchTrim[veh.trim] || 0;
+    const bColor = d.batchColor[veh.color] || 0;
+    const bMY = d.batchMY[veh.my] || 0;
+
+    // Exact config repeat: steep diminishing returns
+    const repeatBTC = 1 / (1 + bBTC * 2);      // 1st=1, 2nd=0.33, 3rd=0.2
+    // Body|trim repeat: moderate penalty
+    const repeatBT  = 1 / (1 + bBT * 0.7);     // 1st=1, 2nd=0.59, 3rd=0.42
+
+    // Color concentration: aggressive — penalize if ANY repeat when batch is small
+    // For small batches (<6), each color repeat is harsh; for larger, use ratio
+    let colorPenalty;
+    if (d.allocated < 6) {
+      colorPenalty = bColor > 0 ? 1 / (1 + bColor * 1.5) : 1;  // 1st=1, 2nd=0.4, 3rd=0.25
+    } else {
+      const colorConc = bColor / d.allocated;
+      colorPenalty = Math.max(0, 1 - colorConc * 2.5);  // 40% concentration = 0
+    }
+
+    // Trim concentration: penalize if >35% of batch is same trim
+    const trimConc = bTrim / d.allocated;
+    const trimVar = Math.max(0, 1 - Math.max(0, trimConc - 0.35) * 4);
+
+    // MY concentration: light penalty if >60% same MY
+    const myConc = bMY / d.allocated;
+    const myVar = Math.max(0, 1 - Math.max(0, myConc - 0.6) * 3);
+
+    batchScore = repeatBTC * 0.2 + repeatBT * 0.15 + colorPenalty * 0.35 + trimVar * 0.2 + myVar * 0.1;
+  }
+
+  // Blend: 35% existing pipeline, 65% batch variety
+  const f_pc = pipeScore * 0.35 + batchScore * 0.65;
+
+  // F6: Sell-Through Fit — how well does this dealer sell this config vs network
+  // Uses a wider scale: 0 = much worse than network, 0.5 = average, 1.0 = much better
+  const stData = (SELL_THROUGH[d.name] || {})[vConfigBT];
+  let f_st = 0.5; // neutral default (no history)
+  if (stData && stData.d >= 3 && stData.nr > 0) {
+    // Ratio of dealer rate to network rate: 1.0 = same, 1.5 = 50% better, 0.5 = 50% worse
+    const ratio = stData.r / stData.nr;
+    // Map: ratio 0.5 -> score 0.15, ratio 1.0 -> score 0.5, ratio 1.5+ -> score 0.85
+    f_st = Math.max(0, Math.min(1, 0.5 + (ratio - 1) * 0.7));
+  } else if (stData && stData.d >= 3) {
+    f_st = stData.r > 0.5 ? 0.65 : 0.35;
+  }
+
+  // F7: Days-to-Sale Speed — faster than network = higher score
+  // 0.5 = at network avg, 1.0 = sells 2x faster, 0.0 = sells 2x slower
+  const dtsDealer = (DAYS_TO_SELL[d.name] || {})[vConfigBT];
+  const dtsNetwork = (DAYS_TO_SELL["_network"] || {})[vConfigBT];
+  let f_ds = 0.5;
+  if (dtsDealer && dtsDealer.c >= 3 && dtsNetwork && dtsNetwork.a > 0) {
+    const ratio = dtsDealer.a / dtsNetwork.a; // <1 = faster, >1 = slower
+    // Map: ratio 0.5 -> score 0.85, ratio 1.0 -> score 0.5, ratio 2.0 -> score 0.15
+    f_ds = Math.max(0, Math.min(1, 0.5 + (1 - ratio) * 0.7));
+  }
+
+  const score = (nMS*f_ms)+(nTR*f_tr)+(nSN*f_sn)+(nPA*f_pa)+(nPC*f_pc)+(nST*f_st)+(nDS*f_ds);
+  return { score, factors: { ms:f_ms, tr:f_tr, sn:f_sn, pa:f_pa, pc:f_pc, st:f_st, ds:f_ds } };
+}
+
+function runAllocation() {
+  const vehicles = matchedVehicles.filter(v => selectedVins.has(v._vin));
+  if (vehicles.length === 0) return;
+
+  const targetMS = parseInt(document.getElementById("sTargetMS").value) || 60;
+  const maxPerDealer = parseInt(document.getElementById("sMaxPerDealer").value) || 0;
+
+  // Read all 7 weights and normalize
+  const wMS = parseInt(document.getElementById("sMS").value);
+  const wTR = parseInt(document.getElementById("sTR").value);
+  const wSN = parseInt(document.getElementById("sSN").value);
+  const wPA = parseInt(document.getElementById("sPA").value);
+  const wPC = parseInt(document.getElementById("sPC").value);
+  const wST = parseInt(document.getElementById("sST").value);
+  const wDS = parseInt(document.getElementById("sDS").value);
+  const wTotal = wMS+wTR+wSN+wPA+wPC+wST+wDS;
+  const eq = 1/7;
+  const nMS = wTotal > 0 ? wMS/wTotal : eq;
+  const nTR = wTotal > 0 ? wTR/wTotal : eq;
+  const nSN = wTotal > 0 ? wSN/wTotal : eq;
+  const nPA = wTotal > 0 ? wPA/wTotal : eq;
+  const nPC = wTotal > 0 ? wPC/wTotal : eq;
+  const nST = wTotal > 0 ? wST/wTotal : eq;
+  const nDS = wTotal > 0 ? wDS/wTotal : eq;
+
+  // Clone dealer state
+  const dlrState = DEALERS.filter(d => !excludedDealers.has(d.name)).map(d => ({
+    ...d,
+    og_current: d.og,
+    allocated: 0,
+    bAvg: blendedAvg(d),
+    bSoN: blendedSoN(d),
+    pipelineBT: { ...(PIPELINE_COMP[d.name] || {}) },
+    // Batch-level variety tracking: counts only from THIS allocation run
+    batchTrim: {},   // { trim: count }
+    batchColor: {},  // { color: count }
+    batchMY: {},     // { my: count }
+    batchBT: {},     // { "body|trim": count }
+    batchBTC: {}     // { "body|trim|color": count }
+  }));
+
+  const maxTR = Math.max(...dlrState.map(d => d.bAvg), 0.01);
+  const maxSoN = Math.max(...dlrState.map(d => d.bSoN), 0.01);
+  const plantMode = document.getElementById("sPlantMode").value;
+  const needsBased = document.getElementById("sNeedsBased").checked;
+  const minPerDealer = parseInt(document.getElementById("sMinPerDealer").value) || 0;
+  const params = { nMS,nTR,nSN,nPA,nPC,nST,nDS, targetMS, maxTR, maxSoN, plantMode };
+
+  const progressWrap = document.getElementById("progressWrap");
+  const progressFill = document.getElementById("progressFill");
+  progressWrap.style.display = "block";
+
+  allocationResults = [];
+  allocationAudit = [];
+
+  // Helper: allocate one vehicle to one dealer and record results
+  function assignVehicle(veh, d, di, tag) {
+    const vConfigBT = veh.body + "|" + veh.trim;
+    const vConfigBTC = veh.body + "|" + veh.trim + "|" + veh.color;
+    const result = scoreDealerForVehicle(d, veh, params);
+    const msBefore = d.bAvg > 0 ? Math.round(d.og / d.bAvg * 30) : 999;
+
+    // Build top-5 candidates for audit (only for non-pinned)
+    let candidates = [{ name: d.name, score: result.score, factors: result.factors }];
+    if (tag !== "pinned") {
+      const scored = [];
+      dlrState.forEach((dd, ddi) => {
+        if (maxPerDealer > 0 && dd.allocated >= maxPerDealer) return;
+        const r2 = scoreDealerForVehicle(dd, veh, params);
+        if (r2.blocked) return;
+        scored.push({ name: dd.name, score: r2.score, factors: r2.factors });
+      });
+      scored.sort((a,b) => b.score - a.score);
+      candidates = scored.slice(0, 5);
+    }
+
+    allocationResults.push({
+      vehicle: veh, dealer: d.name, market: d.market,
+      score: result.score, factors: result.factors,
+      ogBefore: d.og, msBefore, pinned: tag === "pinned"
+    });
+    allocationAudit.push({
+      vin: veh.vin, config: veh.body+'/'+veh.trim+'/'+veh.color,
+      plant: veh.plant, winner: d.name, candidates,
+      pinned: tag === "pinned"
+    });
+    d.og += 1; d.allocated += 1;
+    d.pipelineBT[vConfigBT] = (d.pipelineBT[vConfigBT]||0)+1;
+    d.pipelineBT[vConfigBTC] = (d.pipelineBT[vConfigBTC]||0)+1;
+    // Track batch-level variety
+    d.batchTrim[veh.trim] = (d.batchTrim[veh.trim]||0)+1;
+    d.batchColor[veh.color] = (d.batchColor[veh.color]||0)+1;
+    d.batchMY[veh.my] = (d.batchMY[veh.my]||0)+1;
+    d.batchBT[vConfigBT] = (d.batchBT[vConfigBT]||0)+1;
+    d.batchBTC[vConfigBTC] = (d.batchBTC[vConfigBTC]||0)+1;
+  }
+
+  // Track which vehicles have been assigned
+  const assigned = new Set();
+
+  // Interleave vehicles by color for maximum variety in allocation order
+  // Group by color, then round-robin pick one from each color group
+  const colorGroups = {};
+  vehicles.forEach(v => {
+    const c = v.color || "_none";
+    if (!colorGroups[c]) colorGroups[c] = [];
+    colorGroups[c].push(v);
+  });
+  const colorKeys = Object.keys(colorGroups).sort((a,b) => colorGroups[b].length - colorGroups[a].length);
+  const vehList = [];
+  let remaining = vehicles.length;
+  while (remaining > 0) {
+    for (const ck of colorKeys) {
+      if (colorGroups[ck].length > 0) {
+        vehList.push(colorGroups[ck].shift());
+        remaining--;
+      }
+    }
+  }
+
+  // === PASS 0: Pinned VINs (always first) ===
+  vehList.forEach(veh => {
+    if (!pinnedVins[veh._vin]) return;
+    const pinnedName = pinnedVins[veh._vin];
+    const pinnedIdx = dlrState.findIndex(d => d.name === pinnedName);
+    if (pinnedIdx >= 0) {
+      assignVehicle(veh, dlrState[pinnedIdx], pinnedIdx, "pinned");
+      assigned.add(veh._vin);
+    }
+  });
+
+  // === PASS 1: Minimum guarantee ===
+  // For each dealer below minPerDealer, find best available vehicle and assign
+  if (minPerDealer > 0) {
+    let minRounds = 0;
+    const maxMinRounds = minPerDealer * dlrState.length; // safety cap
+    while (minRounds < maxMinRounds) {
+      // Find dealer most in need of minimum fill (fewest allocated, below min)
+      let needyIdx = -1, lowestAlloc = Infinity;
+      dlrState.forEach((d, di) => {
+        if (d.allocated >= minPerDealer) return;
+        if (maxPerDealer > 0 && d.allocated >= maxPerDealer) return;
+        if (d.allocated < lowestAlloc) { lowestAlloc = d.allocated; needyIdx = di; }
+      });
+      if (needyIdx < 0) break; // all dealers at minimum
+
+      // Find best unassigned vehicle for this dealer
+      const nd = dlrState[needyIdx];
+      let bestVeh = null, bestScore = -Infinity;
+      vehList.forEach(veh => {
+        if (assigned.has(veh._vin)) return;
+        const result = scoreDealerForVehicle(nd, veh, params);
+        if (result.blocked) return;
+        if (result.score > bestScore) { bestScore = result.score; bestVeh = veh; }
+      });
+
+      if (!bestVeh) break; // no compatible vehicles left
+      assignVehicle(bestVeh, nd, needyIdx, "min-guarantee");
+      assigned.add(bestVeh._vin);
+      minRounds++;
+    }
+  }
+
+  // === PASS 2: Open scoring for remaining vehicles ===
+  let stoppedEarly = false;
+  vehList.forEach((veh, vi) => {
+    if (assigned.has(veh._vin)) return;
+    if (stoppedEarly) return;
+
+    // Needs-based check
+    if (needsBased) {
+      const anyNeed = dlrState.some(d => {
+        if (maxPerDealer > 0 && d.allocated >= maxPerDealer) return false;
+        const ms = d.bAvg > 0 ? (d.og / d.bAvg * 30) : 999;
+        return ms < targetMS;
+      });
+      if (!anyNeed) { stoppedEarly = true; return; }
+    }
+
+    // Score all eligible dealers
+    const scored = [];
+    dlrState.forEach((d, di) => {
+      if (maxPerDealer > 0 && d.allocated >= maxPerDealer) return;
+      // Needs-based: skip dealers already at or above target month supply
+      if (needsBased) {
+        const ms = d.bAvg > 0 ? (d.og / d.bAvg * 30) : 999;
+        if (ms >= targetMS) return;
+      }
+      const result = scoreDealerForVehicle(d, veh, params);
+      if (result.blocked) return;
+      scored.push({ idx: di, name: d.name, market: d.market, ...result });
+    });
+
+    scored.sort((a,b) => b.score - a.score);
+    if (scored.length > 0) {
+      const best = scored[0];
+      const d = dlrState[best.idx];
+      const vConfigBT = veh.body + "|" + veh.trim;
+      const vConfigBTC = veh.body + "|" + veh.trim + "|" + veh.color;
+      const msBefore = d.bAvg > 0 ? Math.round(d.og / d.bAvg * 30) : 999;
+      allocationResults.push({
+        vehicle: veh, dealer: d.name, market: d.market,
+        score: best.score, factors: best.factors,
+        ogBefore: d.og, msBefore, pinned: false
+      });
+      allocationAudit.push({
+        vin: veh.vin, config: veh.body+'/'+veh.trim+'/'+veh.color,
+        plant: veh.plant, winner: d.name,
+        candidates: scored.slice(0,5).map(c => ({ name: c.name, score: c.score, factors: c.factors })),
+        pinned: false
+      });
+      d.og += 1; d.allocated += 1;
+      d.pipelineBT[vConfigBT] = (d.pipelineBT[vConfigBT]||0)+1;
+      d.pipelineBT[vConfigBTC] = (d.pipelineBT[vConfigBTC]||0)+1;
+      d.batchTrim[veh.trim] = (d.batchTrim[veh.trim]||0)+1;
+      d.batchColor[veh.color] = (d.batchColor[veh.color]||0)+1;
+      d.batchMY[veh.my] = (d.batchMY[veh.my]||0)+1;
+      d.batchBT[vConfigBT] = (d.batchBT[vConfigBT]||0)+1;
+      d.batchBTC[vConfigBTC] = (d.batchBTC[vConfigBTC]||0)+1;
+      assigned.add(veh._vin);
+    }
+
+    progressFill.style.width = Math.round((vi+1)/vehicles.length*100)+"%";
+  });
+
+  progressWrap.style.display = "none";
+  renderResults(dlrState);
+  renderAuditTrail();
+  renderBreakdown();
+  renderEtaTimeline();
+  document.getElementById("btnExport").disabled = false;
+  document.getElementById("btnSaveA").disabled = false;
+  document.getElementById("btnSaveB").disabled = false;
+  document.getElementById("tabEmail").style.display = "";
+  renderEmails();
+
+  const unallocated = vehicles.length - allocationResults.length;
+  document.getElementById("kUnallocated").textContent = unallocated;
+  let statusMsg = "Allocated " + allocationResults.length + " of " + vehicles.length + " vehicles";
+  if (unallocated > 0 && needsBased) {
+    statusMsg += " | " + unallocated + " left in pool (all dealers at target)";
+  }
+  document.getElementById("allocStatus").textContent = statusMsg;
+
+  // Show needs summary
+  const needsInfo = document.getElementById("needsInfo");
+  if (needsBased) {
+    const dealersBelow = dlrState.filter(d => {
+      const ms = d.bAvg > 0 ? (d.og / d.bAvg * 30) : 999;
+      return ms < targetMS;
+    }).length;
+    const dealersAt = dlrState.length - dealersBelow;
+    needsInfo.style.display = "";
+    document.getElementById("needsSummary").textContent =
+      allocationResults.length + " units needed to reach " + targetMS + "d target | " +
+      dealersAt + " of " + dlrState.length + " dealers at/above target | " +
+      unallocated + " vehicles remain in pool";
+  } else {
+    needsInfo.style.display = "none";
+  }
+}
+
+function renderResults(dlrState) {
+  // KPIs
+  document.getElementById("allocKpis").style.display = "";
+  document.getElementById("kAllocated").textContent = allocationResults.length;
+  const receiving = new Set(allocationResults.map(r => r.dealer));
+  document.getElementById("kDealersReceiving").textContent = receiving.size;
+  const avgScore = allocationResults.length > 0 ? (allocationResults.reduce((s,r) => s + r.score, 0) / allocationResults.length).toFixed(3) : 0;
+  document.getElementById("kAvgScore").textContent = avgScore;
+  const totalNewOG = dlrState.reduce((s,d) => s + d.og, 0);
+  const totalBlendSales = dlrState.reduce((s,d) => s + d.bAvg, 0);
+  const newAvgMS = totalBlendSales > 0 ? Math.round(totalNewOG / totalBlendSales * 30) : 0;
+  document.getElementById("kNewAvgMS").textContent = newAvgMS;
+
+  // Results table
+  document.getElementById("resultsCard").style.display = "";
+  const tbody = document.getElementById("resultsBody");
+  tbody.innerHTML = allocationResults.map((r, i) => {
+    const v = r.vehicle;
+    const z = i % 2 ? ' class="z"' : '';
+    return '<tr' + z + '>' +
+      '<td style="font-family:monospace;font-size:10px">' + v.vin + '</td>' +
+      '<td>' + v.my + '</td><td>' + v.body + '</td><td>' + v.trim + '</td><td>' + v.color + '</td>' +
+      '<td class="r">' + (v.msrp ? '$' + Number(v.msrp).toLocaleString() : '') + '</td>' +
+      '<td><span class="alloc-dealer">' + r.dealer + '</span></td>' +
+      '<td>' + r.market + '</td>' +
+      '<td class="r">' + r.score.toFixed(3) + '</td>' +
+      '<td class="r">' + r.ogBefore + '</td>' +
+      '<td class="r">' + r.msBefore + 'd</td>' +
+      '</tr>';
+  }).join('');
+
+  // Summary table
+  document.getElementById("dealerSummaryCard").style.display = "";
+  const stbody = document.getElementById("summaryBody");
+  const mktOrder = ["Central", "Northeast", "Southeast", "Western"];
+  const mktBadge = { Central: "m-ctr", Northeast: "m-ne", Southeast: "m-se", Western: "m-w" };
+
+  let shtml = "";
+  let idx = 0;
+  mktOrder.forEach(mkt => {
+    const mktDealers = dlrState.filter(d => d.market === mkt && d.allocated > 0).sort((a,b) => b.allocated - a.allocated);
+    if (mktDealers.length === 0) return;
+    mktDealers.forEach(d => {
+      const z = idx % 2 ? ' class="z"' : '';
+      const curMS = d.bAvg > 0 ? Math.round(d.og_current / d.bAvg * 30) : 999;
+      const newMS = d.bAvg > 0 ? Math.round(d.og / d.bAvg * 30) : 999;
+      shtml += '<tr' + z + '>' +
+        '<td><span class="mkt ' + (mktBadge[mkt]||'') + '">' + mkt + '</span></td>' +
+        '<td>' + d.name + '</td>' +
+        '<td class="r">' + d.og_current + '</td>' +
+        '<td class="r" style="font-weight:700;color:var(--ok)">+' + d.allocated + '</td>' +
+        '<td class="r">' + d.og + '</td>' +
+        '<td class="r">' + curMS + 'd</td>' +
+        '<td class="r">' + newMS + 'd</td>' +
+        '<td class="r">' + d.bAvg.toFixed(2) + '</td>' +
+        '<td class="r">' + d.bSoN.toFixed(1) + '%</td>' +
+        '</tr>';
+      idx++;
+    });
+  });
+  stbody.innerHTML = shtml;
+}
+
+// === AUDIT TRAIL ===
+function renderAuditTrail() {
+  document.getElementById("auditCard").style.display = "";
+  const tbody = document.getElementById("auditBody");
+  const colors = {ms:'#2C931E',tr:'#534AB7',sn:'#185FA5',pa:'#BA7517',pc:'#D85A30',st:'#993556',ds:'#4A90D9'};
+  const fKeys = ['ms','tr','sn','pa','pc','st','ds'];
+
+  let html = "";
+  allocationAudit.forEach((a, i) => {
+    const r = allocationResults[i];
+    const f = r.factors || {};
+    const maxF = Math.max(...fKeys.map(k => f[k]||0), 0.01);
+    const barW = 120;
+
+    // Factor mini-bars
+    let bars = '<div style="display:flex;gap:1px;width:'+barW+'px">';
+    fKeys.forEach(k => {
+      const w = Math.round((f[k]||0)/maxF * (barW/fKeys.length));
+      bars += '<div class="factor-bar factor-'+k+'" style="width:'+Math.max(1,w)+'px" title="'+k+': '+(f[k]||0).toFixed(3)+'"></div>';
+    });
+    bars += '</div>';
+
+    const z = i % 2 ? ' z' : '';
+    const pin = r.pinned ? ' <span class="badge badge-ok">PINNED</span>' : '';
+    html += '<tr class="audit-row'+z+'" onclick="toggleAuditDetail('+i+')">' +
+      '<td style="font-family:monospace;font-size:10px">'+a.vin.substring(0,13)+'..'+pin+'</td>' +
+      '<td>'+a.config+'</td><td>'+a.plant+'</td>' +
+      '<td><span class="alloc-dealer">'+a.winner+'</span></td>' +
+      '<td class="r">'+r.score.toFixed(3)+'</td>' +
+      '<td class="r">'+(f.ms||0).toFixed(2)+'</td><td class="r">'+(f.tr||0).toFixed(2)+'</td>' +
+      '<td class="r">'+(f.sn||0).toFixed(2)+'</td><td class="r">'+(f.pa||0).toFixed(2)+'</td>' +
+      '<td class="r">'+(f.pc||0).toFixed(2)+'</td><td class="r">'+(f.st||0).toFixed(2)+'</td>' +
+      '<td class="r">'+(f.ds||0).toFixed(2)+'</td>' +
+      '<td>'+bars+'</td></tr>';
+
+    // Expandable detail row (top 5 candidates)
+    html += '<tr class="audit-detail" id="auditDet'+i+'"><td colspan="13"><div style="padding:4px 0">';
+    html += '<table style="font-size:10px;width:auto;margin-left:20px"><thead><tr style="background:var(--mush-lt)">' +
+      '<th style="background:var(--mush-lt);color:var(--onyx)">Rank</th><th style="background:var(--mush-lt);color:var(--onyx)">Dealer</th>' +
+      '<th class="r" style="background:var(--mush-lt);color:var(--onyx)">Score</th>' +
+      '<th class="r" style="background:var(--mush-lt);color:var(--onyx)">MS</th><th class="r" style="background:var(--mush-lt);color:var(--onyx)">TR</th>' +
+      '<th class="r" style="background:var(--mush-lt);color:var(--onyx)">SoN</th><th class="r" style="background:var(--mush-lt);color:var(--onyx)">Plant</th>' +
+      '<th class="r" style="background:var(--mush-lt);color:var(--onyx)">Compl</th><th class="r" style="background:var(--mush-lt);color:var(--onyx)">S-Thru</th>' +
+      '<th class="r" style="background:var(--mush-lt);color:var(--onyx)">DtS</th></tr></thead><tbody>';
+    a.candidates.forEach((c, ci) => {
+      const cf = c.factors||{};
+      const bold = ci === 0 ? 'font-weight:700;' : '';
+      html += '<tr><td style="'+bold+'">#'+(ci+1)+'</td><td style="'+bold+'">'+c.name+'</td>' +
+        '<td class="r" style="'+bold+'">'+c.score.toFixed(3)+'</td>' +
+        '<td class="r">'+(cf.ms||0).toFixed(3)+'</td><td class="r">'+(cf.tr||0).toFixed(3)+'</td>' +
+        '<td class="r">'+(cf.sn||0).toFixed(3)+'</td><td class="r">'+(cf.pa||0).toFixed(3)+'</td>' +
+        '<td class="r">'+(cf.pc||0).toFixed(3)+'</td><td class="r">'+(cf.st||0).toFixed(3)+'</td>' +
+        '<td class="r">'+(cf.ds||0).toFixed(3)+'</td></tr>';
+    });
+    html += '</tbody></table></div></td></tr>';
+  });
+  tbody.innerHTML = html;
+}
+
+function toggleAuditDetail(i) {
+  const el = document.getElementById("auditDet"+i);
+  el.style.display = el.style.display === "none" || !el.style.display ? "table-row" : "none";
+}
+
+// === SCORE BREAKDOWN ===
+function renderBreakdown() {
+  document.getElementById("breakdownCard").style.display = "";
+  const fKeys = ['ms','tr','sn','pa','pc','st','ds'];
+  const fLabels = {ms:'Month Supply',tr:'Turn Rate',sn:'Share of Nation',pa:'Plant Affinity',pc:'Pipeline Complement',st:'Sell-Through',ds:'Days-to-Sale'};
+  const fColors = {ms:'#2C931E',tr:'#534AB7',sn:'#185FA5',pa:'#BA7517',pc:'#D85A30',st:'#993556',ds:'#4A90D9'};
+
+  // Average factor contributions across all allocations
+  const totals = {};
+  fKeys.forEach(k => totals[k] = 0);
+  allocationResults.forEach(r => {
+    if (r.factors) fKeys.forEach(k => totals[k] += (r.factors[k]||0));
+  });
+  const grandTotal = fKeys.reduce((s,k) => s + totals[k], 0) || 1;
+
+  let html = '<div style="margin-bottom:12px"><strong style="font-size:11px">Average Factor Contribution (across all allocations)</strong>';
+  html += '<div class="breakdown-bar">';
+  fKeys.forEach(k => {
+    const pct = totals[k] / grandTotal * 100;
+    html += '<div class="breakdown-seg" style="width:'+pct+'%;background:'+fColors[k]+'" title="'+fLabels[k]+': '+pct.toFixed(1)+'%"></div>';
+  });
+  html += '</div><div style="display:flex;gap:12px;font-size:10px;margin-top:4px">';
+  fKeys.forEach(k => {
+    const pct = totals[k] / grandTotal * 100;
+    html += '<span style="color:'+fColors[k]+';font-weight:600">'+fLabels[k]+': '+pct.toFixed(1)+'%</span>';
+  });
+  html += '</div></div>';
+
+  // Per-dealer breakdown (top 10 by allocation count)
+  const byDealer = {};
+  allocationResults.forEach(r => {
+    if (!byDealer[r.dealer]) byDealer[r.dealer] = { count:0, factors:{} };
+    byDealer[r.dealer].count++;
+    if (r.factors) fKeys.forEach(k => byDealer[r.dealer].factors[k] = (byDealer[r.dealer].factors[k]||0) + (r.factors[k]||0));
+  });
+  const topDealers = Object.entries(byDealer).sort((a,b)=>b[1].count-a[1].count).slice(0,10);
+
+  html += '<div style="margin-top:12px"><strong style="font-size:11px">Per-Dealer Factor Mix (top 10 by volume)</strong></div>';
+  topDealers.forEach(([name, data]) => {
+    const dTotal = fKeys.reduce((s,k) => s + (data.factors[k]||0), 0) || 1;
+    html += '<div style="display:flex;align-items:center;gap:8px;margin:4px 0">' +
+      '<div style="width:140px;font-size:10px;font-weight:600;text-align:right">'+name+' ('+data.count+')</div>' +
+      '<div class="breakdown-bar" style="flex:1">';
+    fKeys.forEach(k => {
+      const pct = (data.factors[k]||0) / dTotal * 100;
+      html += '<div class="breakdown-seg" style="width:'+pct+'%;background:'+fColors[k]+'" title="'+fLabels[k]+': '+pct.toFixed(1)+'%"></div>';
+    });
+    html += '</div></div>';
+  });
+
+  document.getElementById("breakdownContent").innerHTML = html;
+}
+
+// === ETA TIMELINE ===
+function renderEtaTimeline() {
+  document.getElementById("etaCard").style.display = "";
+  // Group allocated vehicles by ETA month
+  const byMonth = {};
+  const byDealer = {};
+  allocationResults.forEach(r => {
+    const eta = r.vehicle.eta || "Unknown";
+    const mo = eta.length >= 7 ? eta.substring(0,7) : "Unknown";
+    if (!byMonth[mo]) byMonth[mo] = 0;
+    byMonth[mo]++;
+    if (!byDealer[r.dealer]) byDealer[r.dealer] = {};
+    if (!byDealer[r.dealer][mo]) byDealer[r.dealer][mo] = 0;
+    byDealer[r.dealer][mo]++;
+  });
+
+  const months = Object.keys(byMonth).sort();
+  const maxCount = Math.max(...Object.values(byMonth), 1);
+
+  let html = '<div style="margin-bottom:12px"><strong style="font-size:11px">Vehicles by ETA Month</strong></div>';
+  html += '<div style="display:flex;align-items:flex-end;gap:8px;height:80px;padding:0 4px">';
+  months.forEach(mo => {
+    const cnt = byMonth[mo];
+    const h = Math.max(4, Math.round(cnt / maxCount * 70));
+    const label = mo === "Unknown" ? "No ETA" : mo;
+    html += '<div style="text-align:center;flex:1">' +
+      '<div style="font-size:10px;font-weight:700;margin-bottom:2px">'+cnt+'</div>' +
+      '<div style="height:'+h+'px;background:var(--flare);border-radius:3px 3px 0 0;min-width:24px"></div>' +
+      '<div style="font-size:9px;color:var(--silver);margin-top:2px">'+label+'</div></div>';
+  });
+  html += '</div>';
+
+  // Per-dealer ETA table
+  const dealersWithEta = Object.keys(byDealer).sort();
+  if (dealersWithEta.length > 0 && months.length > 0) {
+    html += '<div style="margin-top:16px"><strong style="font-size:11px">Dealer x ETA Distribution</strong></div>';
+    html += '<table style="font-size:10px;margin-top:4px"><thead><tr><th style="background:var(--charcoal)">Dealer</th>';
+    months.forEach(mo => html += '<th class="c" style="background:var(--charcoal)">'+(mo==="Unknown"?"No ETA":mo)+'</th>');
+    html += '<th class="r" style="background:var(--charcoal)">Total</th></tr></thead><tbody>';
+    dealersWithEta.forEach((d,i) => {
+      const z = i%2 ? ' class="z"':'';
+      const total = Object.values(byDealer[d]).reduce((s,v)=>s+v,0);
+      html += '<tr'+z+'><td style="font-weight:600">'+d+'</td>';
+      months.forEach(mo => {
+        const v = byDealer[d][mo]||0;
+        html += '<td class="c">'+(v||'<span class="dim">-</span>')+'</td>';
+      });
+      html += '<td class="r" style="font-weight:700">'+total+'</td></tr>';
+    });
+    html += '</tbody></table>';
+  }
+
+  document.getElementById("etaContent").innerHTML = html;
+}
+
+// === SCENARIO COMPARISON ===
+function saveScenario(which) {
+  const data = {
+    results: [...allocationResults],
+    audit: [...allocationAudit],
+    settings: {
+      ms: document.getElementById("sMS").value,
+      tr: document.getElementById("sTR").value,
+      sn: document.getElementById("sSN").value,
+      pa: document.getElementById("sPA").value,
+      pc: document.getElementById("sPC").value,
+      st: document.getElementById("sST").value,
+      ds: document.getElementById("sDS").value,
+      w90: document.getElementById("sW90").value,
+      w6m: document.getElementById("sW6m").value,
+      targetMS: document.getElementById("sTargetMS").value,
+      plantMode: document.getElementById("sPlantMode").value,
+      excluded: [...excludedDealers]
+    },
+    stats: {
+      count: allocationResults.length,
+      dealers: new Set(allocationResults.map(r=>r.dealer)).size,
+      avgScore: allocationResults.length > 0 ? (allocationResults.reduce((s,r)=>s+r.score,0)/allocationResults.length) : 0
+    }
+  };
+  if (which === 'A') { scenarioA = data; document.getElementById("allocStatus").textContent = "Saved as Scenario A"; }
+  else { scenarioB = data; document.getElementById("allocStatus").textContent = "Saved as Scenario B"; }
+  if (scenarioA && scenarioB) document.getElementById("btnCompare").disabled = false;
+}
+
+function showComparison() {
+  if (!scenarioA || !scenarioB) return;
+  document.getElementById("scenarioCard").style.display = "";
+  const el = document.getElementById("scenarioContent");
+
+  function buildCol(label, sc) {
+    let html = '<div class="scenario-col"><div class="scenario-label">'+label+'</div>';
+    html += '<div style="font-size:11px;margin-bottom:8px">';
+    html += '<strong>'+sc.stats.count+'</strong> vehicles &rarr; <strong>'+sc.stats.dealers+'</strong> dealers &bull; Avg score: <strong>'+sc.stats.avgScore.toFixed(3)+'</strong>';
+    html += '</div>';
+    html += '<div style="font-size:10px;color:var(--iron);margin-bottom:6px">Weights: MS='+sc.settings.ms+' TR='+sc.settings.tr+' SoN='+sc.settings.sn+' PA='+sc.settings.pa+' PC='+sc.settings.pc+' ST='+sc.settings.st+' DtS='+sc.settings.ds+' | Plant: '+sc.settings.plantMode+'</div>';
+    if (sc.settings.excluded.length > 0) html += '<div style="font-size:10px;color:var(--err)">Excluded: '+sc.settings.excluded.join(', ')+'</div>';
+
+    // Top dealers comparison
+    const byDealer = {};
+    sc.results.forEach(r => { byDealer[r.dealer] = (byDealer[r.dealer]||0)+1; });
+    const top = Object.entries(byDealer).sort((a,b)=>b[1]-a[1]).slice(0,10);
+    html += '<table style="font-size:10px;margin-top:8px"><thead><tr><th style="background:var(--charcoal)">Dealer</th><th class="r" style="background:var(--charcoal)">Units</th></tr></thead><tbody>';
+    top.forEach(([d,c],i) => {
+      html += '<tr'+(i%2?' class="z"':'')+'><td>'+d+'</td><td class="r" style="font-weight:700">'+c+'</td></tr>';
+    });
+    html += '</tbody></table>';
+    html += '</div>';
+    return html;
+  }
+
+  // Build diff: which VINs changed dealers?
+  const aMap = {};
+  scenarioA.results.forEach(r => aMap[r.vehicle.vin] = r.dealer);
+  let changed = 0;
+  scenarioB.results.forEach(r => { if (aMap[r.vehicle.vin] && aMap[r.vehicle.vin] !== r.dealer) changed++; });
+
+  el.innerHTML = buildCol('Scenario A', scenarioA) + buildCol('Scenario B', scenarioB) +
+    '<div style="grid-column:1/-1;text-align:center;padding:8px;font-size:12px;font-weight:600;color:var(--iron)">' +
+    changed + ' vehicles changed dealer assignment between scenarios</div>';
+}
+
+// === EMAIL OUTPUT ===
+function getAllocDateRange() {
+  const startVal = document.getElementById("emailStartDate").value;
+  const endVal = document.getElementById("emailEndDate").value;
+  if (!startVal || !endVal) return "";
+  const fmt = d => new Date(d + "T00:00:00").toLocaleDateString("en-US", {month:"long",day:"numeric",year:"numeric"});
+  return fmt(startVal) + " through " + fmt(endVal);
+}
+
+function renderEmails() {
+  if (allocationResults.length === 0) { alert("Run the allocation first."); return; }
+
+  const sender = document.getElementById("emailSender").value || "[RBM Name]";
+  const allocName = document.getElementById("emailAllocName").value || "Secondary Allocation";
+  const customMsg = document.getElementById("emailCustomMsg").value || "";
+  const allocDates = getAllocDateRange();
+  const today = new Date();
+  const monthYear = today.toLocaleString("en-US",{month:"long"}) + " " + today.getFullYear();
+
+  // Group by dealer
+  const byDealer = {};
+  allocationResults.forEach(r => {
+    if (!byDealer[r.dealer]) byDealer[r.dealer] = [];
+    byDealer[r.dealer].push(r);
+  });
+  const dealerNames = Object.keys(byDealer).sort();
+
+  document.getElementById("kEmailCount").textContent = dealerNames.length;
+  document.getElementById("kEmailVehicles").textContent = allocationResults.length;
+  document.getElementById("tabEmail").style.display = "";
+
+  let html = "";
+  dealerNames.forEach((dealer, di) => {
+    const vehs = byDealer[dealer];
+    const swCount = vehs.filter(r => r.vehicle.body === "SW").length;
+    const qmCount = vehs.filter(r => r.vehicle.body === "QM").length;
+    const bodyParts = [];
+    if (swCount > 0) bodyParts.push(swCount + " Station Wagon");
+    if (qmCount > 0) bodyParts.push(qmCount + " Quartermaster");
+
+    html += '<div class="email-card" id="emailCard' + di + '">';
+    html += '<div class="email-header"><span class="dealer-name">' + dealer + '</span>';
+    html += '<span class="unit-count">' + vehs.length + ' unit' + (vehs.length !== 1 ? 's' : '') + ' | ' + (byDealer[dealer][0]||{}).market + '</span></div>';
+
+    // Compute dealer-specific metrics for the explanation
+    const dlrData = DEALERS.find(d => d.name === dealer);
+    let metricsHtml = "";
+    if (dlrData) {
+      const bAvg = blendedAvg(dlrData);
+      const bSoN = blendedSoN(dlrData);
+      const ms = bAvg > 0 ? Math.round(dlrData.og / bAvg * 30) : 0;
+
+      // Avg factor scores for this dealer's allocations
+      const fKeys = ['ms','tr','sn','pa','pc','st','ds'];
+      const fLabels = {ms:'Balanced Month Supply',tr:'Turn Rate',sn:'Share of Nation',
+        pa:'Plant Affinity',pc:'Pipeline Variety',st:'Sell-Through Performance',ds:'Days-to-Sale Speed'};
+      const avgFactors = {};
+      fKeys.forEach(k => { avgFactors[k] = vehs.reduce((s,r) => s + ((r.factors||{})[k]||0), 0) / vehs.length; });
+
+      // Find the top 3 contributing factors
+      const ranked = fKeys.map(k => ({k, v: avgFactors[k]})).sort((a,b) => b.v - a.v);
+      const topFactors = ranked.slice(0, 3).filter(f => f.v > 0.05).map(f => fLabels[f.k]);
+
+      metricsHtml = '<div style="background:#f7f6f4;border:1px solid #e9e8e5;border-radius:6px;padding:10px 12px;margin:10px 0;font-size:11px;color:#444">';
+      metricsHtml += '<strong style="font-size:11px;color:#1D1D1D">How Your Allocation Was Determined</strong><br>';
+      metricsHtml += 'Allocations are calculated using a balanced scoring model that evaluates each retailer across multiple performance dimensions. ';
+      metricsHtml += 'Your store\'s current metrics: ';
+      metricsHtml += '<strong>' + ms + '-day supply</strong>, ';
+      metricsHtml += '<strong>' + bAvg.toFixed(1) + ' avg monthly sales rate</strong>, ';
+      metricsHtml += 'and <strong>' + bSoN.toFixed(1) + '% share of nation sales</strong>. ';
+      if (topFactors.length > 0) {
+        metricsHtml += 'Your allocation was primarily driven by your ';
+        metricsHtml += topFactors.join(', ').replace(/,([^,]*)$/, ' and$1');
+        metricsHtml += '. ';
+      }
+      metricsHtml += 'Vehicle matching also considers plant logistics, inventory mix variety, and historical config sell-through to ensure the right units reach the right stores.';
+      metricsHtml += '</div>';
+    }
+
+    html += '<div class="email-body" id="emailBody' + di + '">';
+    html += '<p>Hi ' + dealer + ',</p>';
+    html += '<p>You\'ve earned <strong>' + vehs.length + ' unit' + (vehs.length !== 1 ? 's' : '') +
+      '</strong> (' + bodyParts.join(", ") + ') as part of our <strong>' + monthYear + ' ' + allocName + '</strong>.' +
+      (allocDates ? ' This allocation is active <strong>' + allocDates + '</strong>.' : '') +
+      ' These are at-port or on-water vehicles expected to ship during this period.</p>';
+    html += metricsHtml;
+    html += '<p>Please review the VINs listed below and confirm your acceptance.</p>';
+
+    // Vehicle table
+    html += '<table style="width:100%;border-collapse:collapse;font-size:11px;margin:12px 0">';
+    html += '<thead><tr style="background:var(--charcoal);color:#fff">';
+    html += '<th style="padding:5px 6px;text-align:left;font-size:9px">VIN</th>';
+    html += '<th style="padding:5px 6px;text-align:left;font-size:9px">Body</th>';
+    html += '<th style="padding:5px 6px;text-align:left;font-size:9px">MY</th>';
+    html += '<th style="padding:5px 6px;text-align:left;font-size:9px">Trim</th>';
+    html += '<th style="padding:5px 6px;text-align:left;font-size:9px">Ext Color</th>';
+    html += '<th style="padding:5px 6px;text-align:left;font-size:9px">Interior</th>';
+    html += '<th style="padding:5px 6px;text-align:left;font-size:9px">Roof</th>';
+    html += '<th style="padding:5px 6px;text-align:left;font-size:9px">Frame</th>';
+    html += '<th style="padding:5px 6px;text-align:right;font-size:9px">MSRP</th>';
+    html += '<th style="padding:5px 6px;text-align:center;font-size:9px">Accept</th>';
+    html += '<th style="padding:5px 6px;text-align:center;font-size:9px">Reject</th>';
+    html += '</tr></thead><tbody>';
+
+    vehs.forEach((r, vi) => {
+      const v = r.vehicle;
+      const z = vi % 2 === 0 ? "#fff" : "#fafaf9";
+      html += '<tr style="background:' + z + '">';
+      html += '<td style="padding:4px 6px;font-family:monospace;font-size:10px;border-bottom:1px solid #eee">' + v.vin + '</td>';
+      html += '<td style="padding:4px 6px;border-bottom:1px solid #eee">' + v.body + '</td>';
+      html += '<td style="padding:4px 6px;border-bottom:1px solid #eee">' + v.my + '</td>';
+      html += '<td style="padding:4px 6px;border-bottom:1px solid #eee">' + v.trim + '</td>';
+      html += '<td style="padding:4px 6px;border-bottom:1px solid #eee">' + v.color + '</td>';
+      html += '<td style="padding:4px 6px;border-bottom:1px solid #eee">' + (v.seats || '') + '</td>';
+      html += '<td style="padding:4px 6px;border-bottom:1px solid #eee">' + (v.roof || '') + '</td>';
+      html += '<td style="padding:4px 6px;border-bottom:1px solid #eee">' + (v.frame || '') + '</td>';
+      html += '<td style="padding:4px 6px;text-align:right;border-bottom:1px solid #eee;font-weight:700">$' + Number(v.msrp||0).toLocaleString() + '</td>';
+      html += '<td style="padding:4px 6px;text-align:center;border-bottom:1px solid #eee;background:#f8fff5">&#9744;</td>';
+      html += '<td style="padding:4px 6px;text-align:center;border-bottom:1px solid #eee;background:#fff5f5">&#9744;</td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+
+    if (customMsg) {
+      html += '<p style="color:var(--iron);font-style:italic">' + customMsg.replace(/\n/g, '<br>') + '</p>';
+    }
+    html += '<p>Let me know if you have any questions or need additional detail on the units assigned.</p>';
+    html += '<p>Best regards,<br><strong>' + sender + '</strong></p>';
+    html += '</div>'; // email-body
+
+    html += '<div class="email-actions">';
+    html += '<button class="btn btn-outline" style="padding:4px 12px;font-size:10px" onclick="copySingleEmail(' + di + ')">Copy This Email</button>';
+    html += '<span class="copy-msg" id="copyMsg' + di + '">Copied!</span>';
+    html += '</div>';
+    html += '</div>'; // email-card
+  });
+
+  document.getElementById("emailContainer").innerHTML = html;
+}
+
+function copySingleEmail(idx) {
+  const el = document.getElementById("emailBody" + idx);
+  if (!el) return;
+  // Copy as both HTML (for rich paste into Outlook/Gmail) and plain text
+  const htmlContent = el.innerHTML;
+  const textContent = el.innerText;
+
+  if (navigator.clipboard && navigator.clipboard.write) {
+    const blob = new Blob([htmlContent], {type: "text/html"});
+    const textBlob = new Blob([textContent], {type: "text/plain"});
+    navigator.clipboard.write([new ClipboardItem({"text/html": blob, "text/plain": textBlob})]).then(() => {
+      showCopyMsg(idx);
+    });
+  } else {
+    // Fallback: select and copy
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    document.execCommand("copy");
+    sel.removeAllRanges();
+    showCopyMsg(idx);
+  }
+}
+
+function copyAllEmails() {
+  const container = document.getElementById("emailContainer");
+  if (!container || !container.innerHTML) { alert("Generate emails first."); return; }
+  // Gather all email bodies
+  const bodies = container.querySelectorAll("[id^='emailBody']");
+  let allHtml = "";
+  let allText = "";
+  bodies.forEach((el, i) => {
+    if (i > 0) { allHtml += "<hr><br>"; allText += "\n---\n\n"; }
+    allHtml += el.innerHTML;
+    allText += el.innerText;
+  });
+  if (navigator.clipboard && navigator.clipboard.write) {
+    const blob = new Blob([allHtml], {type: "text/html"});
+    const textBlob = new Blob([allText], {type: "text/plain"});
+    navigator.clipboard.write([new ClipboardItem({"text/html": blob, "text/plain": textBlob})]);
+  } else {
+    const range = document.createRange();
+    range.selectNodeContents(container);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    document.execCommand("copy");
+    sel.removeAllRanges();
+  }
+  alert("All " + bodies.length + " emails copied to clipboard!");
+}
+
+function showCopyMsg(idx) {
+  const el = document.getElementById("copyMsg" + idx);
+  if (el) { el.classList.add("show"); setTimeout(() => el.classList.remove("show"), 2000); }
+}
+
+// === EMAIL HTML EXPORT ===
+function exportEmailHTML() {
+  if (allocationResults.length === 0) { alert("Run the allocation first."); return; }
+
+  const sender = document.getElementById("emailSender").value || "[RBM Name]";
+  const allocName = document.getElementById("emailAllocName").value || "Secondary Allocation";
+  const customMsg = document.getElementById("emailCustomMsg").value || "";
+  const allocDates = getAllocDateRange();
+  const today = new Date();
+  const monthYear = today.toLocaleString("en-US",{month:"long"}) + " " + today.getFullYear();
+  const dateStr = today.toISOString().slice(0,10);
+
+  const byDealer = {};
+  allocationResults.forEach(r => {
+    if (!byDealer[r.dealer]) byDealer[r.dealer] = [];
+    byDealer[r.dealer].push(r);
+  });
+  const dealerNames = Object.keys(byDealer).sort();
+  const totalVeh = allocationResults.length;
+  const swTotal = allocationResults.filter(r=>r.vehicle.body==="SW").length;
+  const qmTotal = allocationResults.filter(r=>r.vehicle.body==="QM").length;
+
+  let h = '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">';
+  h += '<title>INEOS Grenadier — ' + monthYear + ' ' + allocName + '</title>';
+  h += '<style>';
+  h += '*{margin:0;padding:0;box-sizing:border-box}';
+  h += 'body{font-family:system-ui,-apple-system,sans-serif;background:#F5F4F2;color:#1D1D1D;font-size:13px;-webkit-font-smoothing:antialiased}';
+  h += '.hd{background:#171717;padding:16px 32px;display:flex;justify-content:space-between;align-items:center}';
+  h += '.hd .logo{color:#FF4639;font-weight:700;font-size:14px;letter-spacing:2px}';
+  h += '.hd .sub{color:#9F9F9F;font-size:11px;margin-top:2px}';
+  h += '.hd .ts{color:#9F9F9F;font-size:10px;text-align:right}';
+  h += '.wrap{margin:0 auto;padding:24px 32px}';
+  h += '.summary{background:#fff;border:1px solid #E9E8E5;border-radius:8px;padding:16px;margin-bottom:24px;display:flex;gap:24px;flex-wrap:wrap}';
+  h += '.summary .stat{flex:1;min-width:120px}';
+  h += '.summary .stat-l{font-size:9px;font-weight:600;color:#606060;text-transform:uppercase;letter-spacing:.5px}';
+  h += '.summary .stat-v{font-size:22px;font-weight:700;color:#1D1D1D;margin-top:2px}';
+  h += '.ds{background:#fff;border:1px solid #E9E8E5;border-radius:8px;margin-bottom:24px;overflow:hidden}';
+  h += '.ds-hdr{background:#171717;color:#fff;padding:12px 18px;display:flex;justify-content:space-between;align-items:center}';
+  h += '.ds-hdr .name{font-weight:700;font-size:14px}';
+  h += '.ds-hdr .info{font-size:11px;color:#9F9F9F;display:flex;gap:12px;align-items:center}';
+  h += '.ds-body{padding:20px;font-size:12px;line-height:1.65;color:#1D1D1D}';
+  h += '.ds-body p{margin-bottom:10px}';
+  h += '.meth{background:#F7F6F4;border:1px solid #E9E8E5;border-radius:6px;padding:10px 14px;margin:12px 0;font-size:11px;color:#444}';
+  h += '.meth strong{color:#1D1D1D}';
+  h += '.tbl-wrap{overflow-x:auto;margin:14px 0;border:1px solid #E9E8E5;border-radius:6px}';
+  h += 'table{width:max-content;min-width:100%;border-collapse:collapse;font-size:10px}';
+  h += 'th{background:#171717;color:#fff;padding:6px 8px;text-align:left;font-size:8px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap;position:sticky;top:0}';
+  h += 'th.r{text-align:right}';
+  h += 'td{padding:5px 8px;border-bottom:1px solid #EEEDEA;white-space:nowrap}';
+  h += 'td.r{text-align:right}';
+  h += 'tr.z td{background:#FAFAF9}';
+  h += '.sig{margin-top:16px;padding-top:12px;border-top:1px solid #E9E8E5;font-size:11px;color:#606060}';
+  h += '.footer{text-align:center;padding:24px;font-size:10px;color:#9F9F9F}';
+  h += '.copy-btn{display:inline-flex;align-items:center;gap:4px;padding:6px 14px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid #E9E8E5;background:#fff;color:#1D1D1D;transition:all .15s}';
+  h += '.copy-btn:hover{background:#F0EFEB;border-color:#1D1D1D}';
+  h += '.copy-btn.copied{background:#E8F5E2;color:#165A0F;border-color:#165A0F}';
+  h += '.filter-bar{background:#fff;border:1px solid #E9E8E5;border-radius:8px;padding:12px 18px;margin-bottom:20px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}';
+  h += '.filter-bar label{font-size:10px;font-weight:600;color:#606060;text-transform:uppercase;letter-spacing:.4px}';
+  h += '.filter-bar select{padding:5px 10px;border:1px solid #E9E8E5;border-radius:5px;font-size:11px;background:#fff}';
+  h += '.filter-bar button{padding:5px 12px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid #E9E8E5;background:#fff;color:#1D1D1D}';
+  h += '.filter-bar button:hover{background:#F0EFEB}';
+  h += '.swatch{padding:2px 8px;border-radius:3px;font-weight:600;font-size:9px;display:inline-block}';
+  h += '@media print{body{background:#fff}.ds{page-break-inside:avoid;break-inside:avoid}.copy-btn,.filter-bar{display:none}}';
+  h += '</style></head><body>';
+
+  // Header
+  h += '<div class="hd"><div><div class="logo">INEOS GRENADIER</div>';
+  h += '<div class="sub">' + monthYear + ' ' + allocName + (allocDates ? ' | ' + allocDates : '') + '</div></div>';
+  h += '<div class="ts">Generated ' + dateStr + '</div></div>';
+
+  h += '<div class="wrap">';
+
+  // Summary
+  h += '<div class="summary">';
+  h += '<div class="stat"><div class="stat-l">Total Vehicles</div><div class="stat-v">' + totalVeh + '</div></div>';
+  h += '<div class="stat"><div class="stat-l">Dealers</div><div class="stat-v">' + dealerNames.length + '</div></div>';
+  h += '<div class="stat"><div class="stat-l">Station Wagon</div><div class="stat-v">' + swTotal + '</div></div>';
+  h += '<div class="stat"><div class="stat-l">Quartermaster</div><div class="stat-v">' + qmTotal + '</div></div>';
+  h += '</div>';
+
+  // Color swatch maps and helper
+  const extSwatchBg = {"Britannia Blue":"#1B2D4F","Sela Green":"#4A5E3A","Eldoret Blue":"#2E6B9E",
+    "Scottish White":"#E8E4DC","Sterling Silver":"#C0C0C0","Magic Mushroom":"#A89878",
+    "Shale Blue":"#6B8A99","Donny Grey":"#7A7A7A","Inky Black":"#1A1A1A",
+    "Solid Paint Red":"#CC2222","Queen's Red":"#8B1A1A"};
+  const extSwatchFc = {"Britannia Blue":"#fff","Sela Green":"#fff","Eldoret Blue":"#fff",
+    "Scottish White":"#1D1D1D","Sterling Silver":"#1D1D1D","Magic Mushroom":"#1D1D1D",
+    "Shale Blue":"#fff","Donny Grey":"#fff","Inky Black":"#fff",
+    "Solid Paint Red":"#fff","Queen's Red":"#fff"};
+  const seatSwatchBg = {"Leather Trim - Grey/Black":"#4A4A4A","Utility Trim":"#6B6050","Leather Trim - Black":"#1A1A1A"};
+  const seatSwatchFc = {"Leather Trim - Grey/Black":"#fff","Utility Trim":"#fff","Leather Trim - Black":"#fff"};
+  const roofSwatchBg = {"Scottish White Contrast Roof":"#E8E4DC","Inky Black Contrast Roof":"#1A1A1A"};
+  const roofSwatchFc = {"Scottish White Contrast Roof":"#1D1D1D","Inky Black Contrast Roof":"#fff"};
+  const frameSwatchBg = {"Ladder Frame - Black":"#1A1A1A","Ladder Frame - Halo Red":"#CC3333","Ladder Frame - Rhino Grey":"#7A7A7A"};
+  const frameSwatchFc = {"Ladder Frame - Black":"#fff","Ladder Frame - Halo Red":"#fff","Ladder Frame - Rhino Grey":"#fff"};
+
+  function swatchCell(val, bgMap, fcMap) {
+    if (!val) return '';
+    const bg = bgMap[val];
+    if (bg) return '<span class="swatch" style="background:' + bg + ';color:' + (fcMap[val]||'#fff') + '">' + val + '</span>';
+    return val;
+  }
+
+  // Market filter bar
+  const allMarkets = [...new Set(allocationResults.map(r=>r.market))].sort();
+  h += '<div class="filter-bar">';
+  h += '<label>Filter by Market:</label>';
+  h += "<button onclick=\"filterMkt('all')\" style=\"background:#1D1D1D;color:#fff\">All</button>";
+  allMarkets.forEach(m => {
+    const mBg = {Central:"#E0EDCE",Northeast:"#E4E2F8",Southeast:"#D8ECF9",Western:"#F8EACD"};
+    const mFc = {Central:"#27500A",Northeast:"#3C3489",Southeast:"#0C447C",Western:"#633806"};
+    h += "<button onclick=\"filterMkt('" + m + "')\" style=\"background:" + (mBg[m]||"#fff") + ";color:" + (mFc[m]||"#1D1D1D") + ";border-color:" + (mFc[m]||"#ccc") + "\">" + m + "</button>";
+  });
+  h += '</div>';
+
+  // Per dealer — tag each with market data attribute
+  let dlrIdx = 0;
+  dealerNames.forEach((dealer, di) => {
+    const vehs = byDealer[dealer];
+    const swC = vehs.filter(r=>r.vehicle.body==="SW").length;
+    const qmC = vehs.filter(r=>r.vehicle.body==="QM").length;
+    const bodyParts = [];
+    if (swC > 0) bodyParts.push(swC + " Station Wagon");
+    if (qmC > 0) bodyParts.push(qmC + " Quartermaster");
+
+    const dlrMarket = (vehs[0]||{}).market || "";
+    h += '<div class="ds" id="dlrEmail' + di + '" data-market="' + dlrMarket + '">';
+    h += '<div class="ds-hdr"><span class="name">' + dealer + '</span>';
+    h += '<span class="info"><span>' + vehs.length + ' unit' + (vehs.length!==1?'s':'') + ' | ' + (vehs[0]||{}).market + '</span>';
+    h += '<button class="copy-btn" onclick="copyDlr(' + di + ',this)">Copy Email</button></span></div>';
+
+    h += '<div class="ds-body" id="dlrBody' + di + '">';
+    h += '<p>Hi ' + dealer + ',</p>';
+    h += '<p>You\'ve earned <strong>' + vehs.length + ' unit' + (vehs.length!==1?'s':'') +
+      '</strong> (' + bodyParts.join(", ") + ') as part of our <strong>' + monthYear + ' ' + allocName + '</strong>.' +
+      (allocDates ? ' This allocation is active <strong>' + allocDates + '</strong>.' : '') +
+      ' These are at-port or on-water vehicles expected to ship during this period.</p>';
+
+    // Methodology — no "units on ground" reference
+    const dlrData = DEALERS.find(d => d.name === dealer);
+    if (dlrData) {
+      const bAvg = blendedAvg(dlrData);
+      const bSoN = blendedSoN(dlrData);
+      const ms = bAvg > 0 ? Math.round(dlrData.og / bAvg * 30) : 0;
+      const fKeys = ['ms','tr','sn','pa','pc','st','ds'];
+      const fLabels = {ms:'Balanced Month Supply',tr:'Turn Rate',sn:'Share of Nation',
+        pa:'Plant Affinity',pc:'Pipeline Variety',st:'Sell-Through Performance',ds:'Days-to-Sale Speed'};
+      const avgF = {};
+      fKeys.forEach(k => { avgF[k] = vehs.reduce((s,r) => s + ((r.factors||{})[k]||0), 0) / vehs.length; });
+      const ranked = fKeys.map(k=>({k,v:avgF[k]})).sort((a,b)=>b.v-a.v);
+      const topF = ranked.slice(0,3).filter(f=>f.v>0.05).map(f=>fLabels[f.k]);
+
+      h += '<div class="meth"><strong>How Your Allocation Was Determined</strong><br>';
+      h += 'Allocations are calculated using a balanced scoring model that evaluates each retailer across multiple performance dimensions including ';
+      h += '<strong>' + ms + '-day supply</strong>, ';
+      h += '<strong>' + bAvg.toFixed(1) + ' avg monthly sales rate</strong>, ';
+      h += 'and <strong>' + bSoN.toFixed(1) + '% share of nation sales</strong>. ';
+      if (topF.length > 0) {
+        h += 'Your allocation was primarily driven by your ' + topF.join(', ').replace(/,([^,]*)$/,' and$1') + '. ';
+      }
+      h += 'Vehicle matching also factors in plant logistics, inventory mix variety, and historical configuration sell-through to ensure the right units reach the right stores.</div>';
+    }
+
+    h += '<p>Please review the vehicles listed below and confirm your acceptance.</p>';
+
+    // Full config table in scrollable wrapper
+    h += '<div class="tbl-wrap"><table><thead><tr>';
+    h += '<th>VIN</th><th>Body</th><th>MY</th><th class="r">MSRP</th><th>Trim</th><th>Pack</th>';
+    h += '<th>Ext Color</th><th>Interior</th><th>Roof</th><th>Frame</th>';
+    h += '<th>Wheels</th><th>Tyres</th><th>Safari Windows</th>';
+    h += '<th>Tow Ball</th><th>Heated Seats</th><th>Diff Locks</th>';
+    h += '<th>Access Ladder</th><th>Winch</th><th>Privacy Glass</th><th>Raised Air Intake</th>';
+    h += '<th>Sound System</th><th>Plant</th><th>Vessel ETA</th>';
+    h += '</tr></thead><tbody>';
+
+    vehs.forEach((r, vi) => {
+      const v = r.vehicle;
+      const z = vi % 2 === 1 ? ' class="z"' : '';
+      h += '<tr' + z + '>';
+      h += '<td style="font-family:monospace;font-size:9px">' + v.vin + '</td>';
+      h += '<td>' + v.body + '</td>';
+      h += '<td>' + v.my + '</td>';
+      h += '<td class="r" style="font-weight:700">$' + Number(v.msrp||0).toLocaleString() + '</td>';
+      h += '<td>' + v.trim + '</td>';
+      h += '<td>' + (v.pack||'') + '</td>';
+      h += '<td>' + swatchCell(v.color, extSwatchBg, extSwatchFc) + '</td>';
+      h += '<td>' + swatchCell(v.seats||'', seatSwatchBg, seatSwatchFc) + '</td>';
+      h += '<td>' + swatchCell(v.roof||'', roofSwatchBg, roofSwatchFc) + '</td>';
+      h += '<td>' + swatchCell(v.frame||'', frameSwatchBg, frameSwatchFc) + '</td>';
+      h += '<td>' + (v.wheels||'') + '</td>';
+      h += '<td>' + (v.tyres||'') + '</td>';
+      h += '<td>' + (v.safari||'') + '</td>';
+      h += '<td>' + (v.tow||'') + '</td>';
+      h += '<td>' + (v.heated_seats||'') + '</td>';
+      h += '<td>' + (v.diff_locks||'') + '</td>';
+      h += '<td>' + (v.ladder||'') + '</td>';
+      h += '<td>' + (v.winch||'') + '</td>';
+      h += '<td>' + (v.privacy_glass||'') + '</td>';
+      h += '<td>' + (v.air_intake||'') + '</td>';
+      h += '<td>' + (v.sound||'') + '</td>';
+      h += '<td>' + (v.plant||'') + '</td>';
+      h += '<td>' + (v.eta||'') + '</td>';
+      h += '</tr>';
+    });
+    h += '</tbody></table></div>';
+
+    if (customMsg) {
+      h += '<p style="color:#606060;font-style:italic">' + customMsg.replace(/\n/g,'<br>') + '</p>';
+    }
+
+    h += '<div class="sig">Let me know if you have any questions or need additional detail on the units assigned.<br><br>';
+    h += 'Best regards,<br><strong>' + sender + '</strong></div>';
+    h += '</div></div>';
+  });
+
+  h += '</div>';
+  h += '<div class="footer">INEOS Automotive Americas | ' + monthYear + ' ' + allocName + ' | ' + totalVeh + ' Vehicles | Generated ' + dateStr + '</div>';
+
+  // Copy function embedded in the HTML
+  h += '<script>';
+  h += 'function filterMkt(mkt) {';
+  h += '  document.querySelectorAll(".ds").forEach(el => {';
+  h += '    if (mkt === "all") { el.style.display = ""; }';
+  h += '    else { el.style.display = el.dataset.market === mkt ? "" : "none"; }';
+  h += '  });';
+  h += '}';
+  h += 'function copyDlr(idx, btn) {';
+  h += '  const el = document.getElementById("dlrBody" + idx);';
+  h += '  if (!el) return;';
+  h += '  const htmlC = el.innerHTML;';
+  h += '  const textC = el.innerText;';
+  h += '  if (navigator.clipboard && navigator.clipboard.write) {';
+  h += '    const hBlob = new Blob([htmlC], {type:"text/html"});';
+  h += '    const tBlob = new Blob([textC], {type:"text/plain"});';
+  h += '    navigator.clipboard.write([new ClipboardItem({"text/html":hBlob,"text/plain":tBlob})]).then(() => {';
+  h += '      btn.textContent = "Copied!"; btn.classList.add("copied");';
+  h += '      setTimeout(() => { btn.textContent = "Copy Email"; btn.classList.remove("copied"); }, 2500);';
+  h += '    });';
+  h += '  } else {';
+  h += '    const range = document.createRange(); range.selectNodeContents(el);';
+  h += '    const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);';
+  h += '    document.execCommand("copy"); sel.removeAllRanges();';
+  h += '    btn.textContent = "Copied!"; btn.classList.add("copied");';
+  h += '    setTimeout(() => { btn.textContent = "Copy Email"; btn.classList.remove("copied"); }, 2500);';
+  h += '  }';
+  h += '}';
+  h += '<\/script>';
+
+  h += '</body></html>';
+
+  const blob = new Blob([h], {type: "text/html"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "INEOS_Allocation_Emails_" + dateStr + ".html";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// === EXCEL EXPORT ===
+function exportExcel() {
+  if (allocationResults.length === 0) return;
+
+  // === COLOR PALETTES ===
+  const extBg = {"Britannia Blue":"1B2D4F","Sela Green":"4A5E3A","Eldoret Blue":"2E6B9E",
+    "Scottish White":"E8E4DC","Sterling Silver":"C0C0C0","Magic Mushroom":"A89878",
+    "Shale Blue":"6B8A99","Donny Grey":"7A7A7A","Inky Black":"1A1A1A",
+    "Solid Paint Red":"CC2222","Queen's Red":"8B1A1A"};
+  const extFc = {"Britannia Blue":"FFFFFF","Sela Green":"FFFFFF","Eldoret Blue":"FFFFFF",
+    "Scottish White":"1D1D1D","Sterling Silver":"1D1D1D","Magic Mushroom":"1D1D1D",
+    "Shale Blue":"FFFFFF","Donny Grey":"FFFFFF","Inky Black":"FFFFFF",
+    "Solid Paint Red":"FFFFFF","Queen's Red":"FFFFFF"};
+  const seatBg = {"Leather Trim - Grey/Black":"4A4A4A","Utility Trim":"6B6050","Leather Trim - Black":"1A1A1A"};
+  const roofBg = {"Scottish White Contrast Roof":"E8E4DC","Inky Black Contrast Roof":"1A1A1A"};
+  const roofFc = {"Scottish White Contrast Roof":"1D1D1D","Inky Black Contrast Roof":"FFFFFF"};
+  const framBg = {"Ladder Frame - Black":"1A1A1A","Ladder Frame - Halo Red":"CC3333","Ladder Frame - Rhino Grey":"7A7A7A"};
+  const framFc = {"Ladder Frame - Black":"FFFFFF","Ladder Frame - Halo Red":"FFFFFF","Ladder Frame - Rhino Grey":"FFFFFF"};
+  const mktBg = {Central:"E0EDCE",Northeast:"E4E2F8",Southeast:"D8ECF9",Western:"F8EACD"};
+  const mktFc = {Central:"27500A",Northeast:"3C3489",Southeast:"0C447C",Western:"633806"};
+  const plantBg = {P912:"E4E2F8",P913:"D8ECF9",P914:"F8EACD",P915:"E0EDCE"};
+  const plantFc = {P912:"3C3489",P913:"0C447C",P914:"633806",P915:"27500A"};
+
+  // Consistent thin border
+  const bdr = {top:{style:"thin",color:{rgb:"D9D7D0"}},bottom:{style:"thin",color:{rgb:"D9D7D0"}},
+    left:{style:"thin",color:{rgb:"D9D7D0"}},right:{style:"thin",color:{rgb:"D9D7D0"}}};
+  const wfBdr = {top:{style:"medium",color:{rgb:"FF4639"}},bottom:{style:"medium",color:{rgb:"FF4639"}},
+    left:{style:"medium",color:{rgb:"FF4639"}},right:{style:"medium",color:{rgb:"FF4639"}}};
+
+  // === BUILD DATA ===
+  const dataRows = allocationResults.map(r => {
+    const v = r.vehicle; const f = r.factors || {};
+    return [
+      v.status||"", r.dealer, "","","", r.market,
+      v.vin, v.body, v.my, v.msrp||"", v.trim, v.pack||"", v.color,
+      v.seats||"", v.roof||"", v.safari||"", v.wheels||"", v.tyres||"",
+      v.frame||"", v.tow||"", v.heated_seats||"", v.diff_locks||"",
+      v.ladder||"", v.aux_battery||"", v.aux_switch||"", v.carpet||"",
+      v.compass||"", v.centre_diff||"", v.emerg_safety||"", v.floor_trim||"",
+      v.winch||"", v.utility_rails||"", v.privacy_glass||"", v.air_intake||"",
+      v.smokers||"", v.spare_wheel||"", v.front_tow||"", v.bump_strips||"",
+      v.steering||"", v.wheel_locks||"", v.sound||"",
+      v.plant||"", "", v.eta||"", v.vessel||"",
+      Math.round(r.score*1000)/1000, v.channel||"", v.dealer||"",
+      Math.round((f.ms||0)*1000)/1000, Math.round((f.tr||0)*1000)/1000,
+      Math.round((f.sn||0)*1000)/1000, Math.round((f.pa||0)*1000)/1000,
+      Math.round((f.pc||0)*1000)/1000, Math.round((f.st||0)*1000)/1000,
+      Math.round((f.ds||0)*1000)/1000
+    ];
+  });
+  const headers = [
+    "Status","Allocated Retailer","Accepted / Rejected","Assigned To","Freight Order Date",
+    "Market","VIN","Body","MY","MSRP (US$)","Trim","Rough Pack","Ext Color",
+    "Seats","Roof Color","Safari Windows","Wheels","Tyres",
+    "Frame Color","Tow Ball","Heated Seats","Diff Locks R&F",
+    "Access Ladder","Aux Battery","Aux Switchbar","Carpet Mats",
+    "Compass","Diff Lock Central","Emerg Safety","Floor Trim",
+    "Winch","Utility Rails","Privacy Glass","Raised Air Intake",
+    "Smokers Pack","Spare Wheel","Tow Plate Front","Bump Strips",
+    "Steering/Grips","Wheel Locks","Speaker System",
+    "Plant","Handover Date","Vessel ETA","Vessel",
+    "Alloc Score","Channel","Current Dealer",
+    "F:Mo Supply","F:Turn Rate","F:SoN","F:Plant","F:Compl","F:Sell-Thru","F:DtS"
+  ];
+
+  const sortedResults = [...allocationResults].sort((a,b) => a.dealer.localeCompare(b.dealer));
+  const sortedData = sortedResults.map(r => dataRows[allocationResults.indexOf(r)]);
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...sortedData]);
+  const range = XLSX.utils.decode_range(ws['!ref']);
+
+  const scores = allocationResults.map(r => r.score);
+  const maxSc = Math.max(...scores, 0.01), minSc = Math.min(...scores, 0);
+
+  // === HEADER ROW ===
+  const wfSet = new Set(["Accepted / Rejected","Assigned To","Freight Order Date"]);
+  for (let c = 0; c < headers.length; c++) {
+    const addr = XLSX.utils.encode_cell({r:0,c}); if (!ws[addr]) continue;
+    const h = headers[c];
+    let bg = "1D1D1D";
+    if (wfSet.has(h)) bg = "FF4639";
+    else if (h.startsWith("F:")) bg = "333333";
+    else if (h === "Allocated Retailer") bg = "165A0F";
+    else if (h === "Alloc Score") bg = "165A0F";
+    ws[addr].s = {
+      fill:{fgColor:{rgb:bg}}, font:{color:{rgb:"FFFFFF"},bold:true,sz:9},
+      alignment:{horizontal:"center",vertical:"center"}, border:bdr
+    };
+  }
+  ws['!rows'] = [{hpt:30}];
+
+  // === DATA ROWS ===
+  for (let r = 1; r <= sortedData.length; r++) {
+    const row = sortedData[r-1];
+    const z = r%2===0 ? "F7F6F4" : "FFFFFF";
+    for (let c = 0; c < headers.length; c++) {
+      const addr = XLSX.utils.encode_cell({r,c});
+      if (!ws[addr]) ws[addr] = {v:"",t:"s"};
+      const h = headers[c], val = row[c], sv = String(val||"");
+      let bg=z, fc="1D1D1D", b=false, fmt=undefined, ha=undefined;
+
+      // --- Workflow columns: warm yellow, red border, UNLOCKED for RBM editing ---
+      if (wfSet.has(h)) {
+        ws[addr].s = {fill:{fgColor:{rgb:"FFF8E1"}},font:{color:{rgb:"8B1A1A"},bold:true,sz:10},
+          border:wfBdr,alignment:{horizontal:"center"},protection:{locked:false}};
+        continue;
+      }
+      // --- Allocated Retailer: soft green ---
+      if (h==="Allocated Retailer") { bg="DCEFD6"; fc="165A0F"; b=true; }
+      // --- MSRP: currency, bold ---
+      if (h==="MSRP (US$)" && val) { fmt="$#,##0"; ha="right"; b=true; }
+      // --- Color swatch columns ONLY (physical vehicle color characteristics) ---
+      if (h==="Ext Color" && extBg[sv]) { bg=extBg[sv]; fc=extFc[sv]||"FFFFFF"; b=true; }
+      if (h==="Seats" && seatBg[sv]) { bg=seatBg[sv]; fc="FFFFFF"; b=true; }
+      if (h==="Roof Color" && roofBg[sv]) { bg=roofBg[sv]; fc=roofFc[sv]||"1D1D1D"; b=true; }
+      if (h==="Frame Color" && framBg[sv]) { bg=framBg[sv]; fc=framFc[sv]||"FFFFFF"; b=true; }
+      // --- Alloc Score: 3-tone ---
+      if (h==="Alloc Score") {
+        const pct = maxSc>minSc ? ((Number(val)||0)-minSc)/(maxSc-minSc) : 0.5;
+        bg = pct>=0.66 ? "DCEFD6" : pct>=0.33 ? "FEF5E0" : "FADED6";
+        fc = pct>=0.66 ? "165A0F" : pct>=0.33 ? "6B4F0A" : "8B1A1A";
+        fmt="0.000"; ha="right"; b=true;
+      }
+      // --- Channel ---
+      if (h==="Channel") { fc="606060"; }
+      // --- Current Dealer ---
+      if (h==="Current Dealer") { fc="9F9F9F"; }
+      // --- Factor columns: clean 3-tone + light text ---
+      if (h.startsWith("F:")) {
+        const fv = Number(val)||0;
+        if (fv>=0.5)      { bg="DCEFD6"; fc="27500A"; }
+        else if (fv>=0.2) { bg="FEF5E0"; fc="6B4F0A"; }
+        else if (fv>0)    { bg=z;        fc="B0B0B0"; }
+        else if (fv<0)    { bg="FADED6"; fc="8B1A1A"; }
+        else              { bg=z;        fc="D0D0D0"; }
+        fmt="0.000"; ha="right";
+      }
+
+      ws[addr].s = {
+        fill:{fgColor:{rgb:bg}}, font:{color:{rgb:fc},bold:b,sz:9},
+        border:bdr, alignment:{horizontal:ha||undefined,vertical:"center"}
+      };
+      if (fmt) ws[addr].z = fmt;
+    }
+  }
+
+  // === COLUMN WIDTHS ===
+  const cw = {
+    "Status":15,"Allocated Retailer":22,"Accepted / Rejected":18,"Assigned To":16,"Freight Order Date":18,
+    "Market":13,"VIN":21,"Body":6,"MY":7,"MSRP (US$)":13,"Trim":17,"Rough Pack":15,"Ext Color":23,
+    "Seats":23,"Roof Color":27,"Safari Windows":17,"Wheels":23,"Tyres":23,
+    "Frame Color":17,"Tow Ball":17,"Heated Seats":17,"Diff Locks R&F":17,
+    "Access Ladder":15,"Aux Battery":15,"Aux Switchbar":15,"Carpet Mats":15,
+    "Compass":17,"Diff Lock Central":17,"Emerg Safety":15,"Floor Trim":15,
+    "Winch":13,"Utility Rails":15,"Privacy Glass":17,"Raised Air Intake":17,
+    "Smokers Pack":14,"Spare Wheel":14,"Tow Plate Front":16,"Bump Strips":14,
+    "Steering/Grips":17,"Wheel Locks":14,"Speaker System":17,
+    "Plant":8,"Handover Date":14,"Vessel ETA":12,"Vessel":15,
+    "Alloc Score":12,"Channel":14,"Current Dealer":22,
+    "F:Mo Supply":12,"F:Turn Rate":12,"F:SoN":10,"F:Plant":10,"F:Compl":10,"F:Sell-Thru":12,"F:DtS":10
+  };
+  ws['!cols'] = headers.map(h => ({wch:cw[h]||13}));
+
+  const wb = XLSX.utils.book_new();
+  // Protect Allocation sheet
+  ws['!protect'] = { password: "montvale", sheet: true, objects: true, scenarios: true,
+    formatCells: false, formatColumns: false, formatRows: false, sort: false, autoFilter: false };
+
+  XLSX.utils.book_append_sheet(wb, ws, "Allocation");
+
+  // === SHEET 2: DEALER EMAIL TEMPLATES ===
+  try { buildDealerEmailSheet(wb, sortedResults); } catch(e) { console.error("Dealer Email sheet error:", e); alert("Dealer Email sheet error: " + e.message); }
+
+  // === SHEET 3: INTERNAL SUMMARY ===
+  try { buildInternalSummarySheet(wb, sortedResults); } catch(e) { console.error("Internal Summary sheet error:", e); alert("Internal Summary sheet error: " + e.message); }
+
+  XLSX.writeFile(wb, "INEOS_Allocation_" + new Date().toISOString().slice(0,10) + ".xlsx");
+}
+
+function buildDealerEmailSheet(wb, results) {
+  const hdrStyle = {fill:{fgColor:{rgb:"1D1D1D"}},font:{color:{rgb:"FFFFFF"},bold:true,sz:9},
+    alignment:{horizontal:"center",vertical:"center"},
+    border:{bottom:{style:"thin",color:{rgb:"606060"}}}};
+  const bdr = {top:{style:"thin",color:{rgb:"D9D7D0"}},bottom:{style:"thin",color:{rgb:"D9D7D0"}},
+    left:{style:"thin",color:{rgb:"D9D7D0"}},right:{style:"thin",color:{rgb:"D9D7D0"}}};
+
+  // Group results by dealer
+  const byDealer = {};
+  results.forEach(r => {
+    if (!byDealer[r.dealer]) byDealer[r.dealer] = [];
+    byDealer[r.dealer].push(r);
+  });
+  const dealerNames = Object.keys(byDealer).sort();
+
+  // Build email sheet rows
+  const sheetData = [];
+  const merges = [];
+  const styles = {}; // row,col -> style
+
+  const today = new Date();
+  const monthName = today.toLocaleString("en-US",{month:"long"});
+  const year = today.getFullYear();
+  const totalVeh = results.length;
+  const swCount = results.filter(r => r.vehicle.body === "SW").length;
+  const qmCount = results.filter(r => r.vehicle.body === "QM").length;
+
+  dealerNames.forEach(dealer => {
+    const vehs = byDealer[dealer];
+    const dlrSW = vehs.filter(v => v.vehicle.body === "SW").length;
+    const dlrQM = vehs.filter(v => v.vehicle.body === "QM").length;
+    const bodyDesc = [];
+    if (dlrSW > 0) bodyDesc.push(dlrSW + " Station Wagon");
+    if (dlrQM > 0) bodyDesc.push(dlrQM + " Quartermaster");
+
+    const startRow = sheetData.length;
+
+    // Email header row (dealer name)
+    sheetData.push(["DEALER: " + dealer, "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
+    const dealerRow = startRow;
+    styles[dealerRow + ",0"] = {fill:{fgColor:{rgb:"165A0F"}},font:{color:{rgb:"FFFFFF"},bold:true,sz:12},
+      alignment:{vertical:"center"}};
+    merges.push({s:{r:dealerRow,c:0},e:{r:dealerRow,c:15}});
+
+    // Email body
+    sheetData.push(["Hi " + dealer + ","]);
+    merges.push({s:{r:startRow+1,c:0},e:{r:startRow+1,c:15}});
+    styles[(startRow+1)+",0"] = {font:{sz:10,bold:false,color:{rgb:"1D1D1D"}},alignment:{wrapText:true}};
+
+    const xlAllocDates = getAllocDateRange();
+    const earnLine = "You've earned " + vehs.length + " units (" + bodyDesc.join(", ") +
+      ") as part of our " + monthName + " " + year + " Secondary Allocation." +
+      (xlAllocDates ? " This allocation is active " + xlAllocDates + "." : "") +
+      " These are at-port or on-water vehicles expected to ship during this period.";
+    sheetData.push([earnLine]);
+    merges.push({s:{r:startRow+2,c:0},e:{r:startRow+2,c:15}});
+    styles[(startRow+2)+",0"] = {font:{sz:10,color:{rgb:"1D1D1D"}},alignment:{wrapText:true}};
+
+    // Methodology explanation
+    const dlrData = DEALERS.find(d => d.name === dealer);
+    let methLine = "Allocations are calculated using a balanced scoring model evaluating each retailer across performance dimensions.";
+    if (dlrData) {
+      const bAvg = blendedAvg(dlrData);
+      const bSoN = blendedSoN(dlrData);
+      const ms = bAvg > 0 ? Math.round(dlrData.og / bAvg * 30) : 0;
+      const fKeys = ['ms','tr','sn','pa','pc','st','ds'];
+      const fLabels = {ms:'Balanced Month Supply',tr:'Turn Rate',sn:'Share of Nation',
+        pa:'Plant Affinity',pc:'Pipeline Variety',st:'Sell-Through Performance',ds:'Days-to-Sale Speed'};
+      const avgF = {};
+      fKeys.forEach(k => { avgF[k] = vehs.reduce((s,r) => s + ((r.factors||{})[k]||0), 0) / vehs.length; });
+      const ranked = fKeys.map(k=>({k,v:avgF[k]})).sort((a,b)=>b.v-a.v);
+      const topF = ranked.slice(0,3).filter(f=>f.v>0.05).map(f=>fLabels[f.k]);
+      methLine = "Your metrics: " + ms + "-day supply, " +
+        bAvg.toFixed(1) + " avg monthly sales rate, " + bSoN.toFixed(1) + "% share of nation sales. " +
+        (topF.length > 0 ? "Your allocation was driven by your " + topF.join(", ").replace(/,([^,]*)$/," and$1") + ". " : "") +
+        "Vehicle matching also considers plant logistics, inventory mix variety, and historical sell-through.";
+    }
+    sheetData.push([methLine]);
+    merges.push({s:{r:startRow+3,c:0},e:{r:startRow+3,c:15}});
+    styles[(startRow+3)+",0"] = {font:{sz:9,italic:true,color:{rgb:"606060"}},alignment:{wrapText:true}};
+
+    sheetData.push(["Please review the VINs listed below and confirm your acceptance."]);
+    merges.push({s:{r:startRow+4,c:0},e:{r:startRow+4,c:15}});
+    styles[(startRow+4)+",0"] = {font:{sz:10,color:{rgb:"1D1D1D"}},alignment:{wrapText:true}};
+
+    sheetData.push([]); // spacer
+
+    // VIN table header
+    const tblHdr = ["Material Desc","SO #","VIN","CVP 5k/5k","Earned Dealer","Accept","Reject",
+      "Ship To","Freight Order Date","MSRP","Trim","Rough Pack","Ext Color","Interior","Contrast Roof","Frame Color"];
+    sheetData.push(tblHdr);
+    const hdrRow = startRow + 6;
+    for (let c = 0; c < tblHdr.length; c++) {
+      styles[hdrRow+","+c] = hdrStyle;
+    }
+
+    // VIN rows
+    vehs.forEach((r, vi) => {
+      const v = r.vehicle;
+      const z = vi%2===0 ? "FFFFFF" : "F7F6F4";
+      const rowData = [
+        v.material||"", v.so_no||"", v.vin, "", dealer, "", "", "", "",
+        v.msrp||"", v.trim||"", v.pack||"", v.color||"", v.seats||"", v.roof||"", v.frame||""
+      ];
+      sheetData.push(rowData);
+      const vRow = hdrRow + 1 + vi;
+      for (let c = 0; c < rowData.length; c++) {
+        let cellStyle = {fill:{fgColor:{rgb:z}},font:{sz:9,color:{rgb:"1D1D1D"}},border:bdr};
+        // Accept/Reject columns: yellow, UNLOCKED for RBM editing
+        if (c === 5 || c === 6) {
+          cellStyle = {fill:{fgColor:{rgb:"FFF8E1"}},font:{sz:9,bold:true,color:{rgb:"8B1A1A"}},border:bdr,
+            alignment:{horizontal:"center"},protection:{locked:false}};
+        }
+        // Ship To / Freight Order Date: yellow, UNLOCKED for RBM editing
+        if (c === 7 || c === 8) {
+          cellStyle = {fill:{fgColor:{rgb:"FFF8E1"}},font:{sz:9,color:{rgb:"1D1D1D"}},border:bdr,
+            protection:{locked:false}};
+        }
+        // MSRP: currency
+        if (c === 9 && rowData[c]) {
+          cellStyle.font = {...cellStyle.font, bold:true};
+        }
+        styles[vRow+","+c] = cellStyle;
+      }
+    });
+
+    // Closing
+    sheetData.push([]);
+    sheetData.push(["Let me know if you have any questions or need additional detail on the units assigned."]);
+    const closeRow = sheetData.length - 1;
+    merges.push({s:{r:closeRow,c:0},e:{r:closeRow,c:15}});
+    styles[closeRow+",0"] = {font:{sz:10,italic:true,color:{rgb:"606060"}}};
+
+    sheetData.push(["Best regards,"]);
+    sheetData.push(["[RBM Name]"]);
+    sheetData.push([]); // spacer
+    sheetData.push([]); // spacer between dealers
+  });
+
+  const ws2 = XLSX.utils.aoa_to_sheet(sheetData);
+
+  // Apply styles
+  for (const key in styles) {
+    const [r,c] = key.split(",").map(Number);
+    const addr = XLSX.utils.encode_cell({r,c});
+    if (!ws2[addr]) ws2[addr] = {v:"",t:"s"};
+    ws2[addr].s = styles[key];
+  }
+
+  // Apply merges
+  ws2['!merges'] = merges;
+
+  // Column widths
+  ws2['!cols'] = [
+    {wch:24},{wch:10},{wch:21},{wch:10},{wch:20},{wch:8},{wch:8},
+    {wch:18},{wch:18},{wch:12},{wch:16},{wch:14},{wch:22},{wch:22},{wch:24},{wch:18}
+  ];
+
+  // Protect Dealer Emails sheet — only Accept/Reject/ShipTo/FreightDate cells are editable
+  ws2['!protect'] = { password: "montvale", sheet: true, objects: true, scenarios: true,
+    formatCells: false, formatColumns: false, formatRows: false, sort: false, autoFilter: false };
+
+  XLSX.utils.book_append_sheet(wb, ws2, "Dealer Emails");
+}
+
+function buildInternalSummarySheet(wb, results) {
+  const hdrS = {fill:{fgColor:{rgb:"1D1D1D"}},font:{color:{rgb:"FFFFFF"},bold:true,sz:10},
+    alignment:{horizontal:"center",vertical:"center"}};
+  const bdr = {top:{style:"thin",color:{rgb:"D9D7D0"}},bottom:{style:"thin",color:{rgb:"D9D7D0"}},
+    left:{style:"thin",color:{rgb:"D9D7D0"}},right:{style:"thin",color:{rgb:"D9D7D0"}}};
+
+  const today = new Date();
+  const monthName = today.toLocaleString("en-US",{month:"long"});
+  const year = today.getFullYear();
+  const totalVeh = results.length;
+  const swCount = results.filter(r => r.vehicle.body === "SW").length;
+  const qmCount = results.filter(r => r.vehicle.body === "QM").length;
+  const swPct = totalVeh > 0 ? (swCount/totalVeh*100).toFixed(1) : 0;
+  const qmPct = totalVeh > 0 ? (qmCount/totalVeh*100).toFixed(1) : 0;
+  const dealerSet = new Set(results.map(r=>r.dealer));
+  const mktSet = {};
+  results.forEach(r => { mktSet[r.market] = (mktSet[r.market]||0)+1; });
+
+  // Summary data
+  const data = [];
+  const merges = [];
+  const styles = {};
+
+  // Title block
+  data.push(["INEOS AUTOMOTIVE AMERICAS"]);
+  styles["0,0"] = {font:{bold:true,sz:14,color:{rgb:"1D1D1D"}},alignment:{horizontal:"left"}};
+  merges.push({s:{r:0,c:0},e:{r:0,c:7}});
+
+  data.push([monthName + " " + year + " Secondary Allocation"]);
+  styles["1,0"] = {font:{bold:true,sz:12,color:{rgb:"FF4639"}},alignment:{horizontal:"left"}};
+  merges.push({s:{r:1,c:0},e:{r:1,c:7}});
+
+  data.push([totalVeh + " Units  |  " + swCount + " Station Wagon (" + swPct + "%)  +  " + qmCount + " Quartermaster (" + qmPct + "%)",
+    "","","","","","","United States"]);
+  styles["2,0"] = {font:{bold:true,sz:11,color:{rgb:"606060"}}};
+  merges.push({s:{r:2,c:0},e:{r:2,c:6}});
+
+  data.push([]);
+
+  // KPI row
+  data.push(["ALLOCATION SUMMARY","","","","","","",""]);
+  styles["4,0"] = {fill:{fgColor:{rgb:"1D1D1D"}},font:{color:{rgb:"FFFFFF"},bold:true,sz:10}};
+  merges.push({s:{r:4,c:0},e:{r:4,c:7}});
+
+  data.push(["Total Vehicles", totalVeh, "", "Dealers Receiving", dealerSet.size, "", "Avg Score",
+    results.length > 0 ? (results.reduce((s,r)=>s+r.score,0)/results.length).toFixed(3) : 0]);
+  for (let c of [0,3,6]) styles["5,"+c] = {font:{bold:true,sz:9,color:{rgb:"606060"}}};
+  for (let c of [1,4,7]) styles["5,"+c] = {font:{bold:true,sz:12,color:{rgb:"1D1D1D"}}};
+
+  data.push([]);
+
+  // Market breakdown
+  data.push(["MARKET BREAKDOWN","","","",""]);
+  styles["7,0"] = {fill:{fgColor:{rgb:"1D1D1D"}},font:{color:{rgb:"FFFFFF"},bold:true,sz:10}};
+  merges.push({s:{r:7,c:0},e:{r:7,c:4}});
+
+  data.push(["Market","Units","SW","QM","% of Total"]);
+  for (let c=0;c<5;c++) styles["8,"+c] = hdrS;
+
+  const mktOrder = ["Central","Northeast","Southeast","Western"];
+  const mktColors = {Central:"E0EDCE",Northeast:"E4E2F8",Southeast:"D8ECF9",Western:"F8EACD"};
+  let mRow = 9;
+  mktOrder.forEach(mkt => {
+    const mktResults = results.filter(r=>r.market===mkt);
+    if (mktResults.length === 0) return;
+    const mSW = mktResults.filter(r=>r.vehicle.body==="SW").length;
+    const mQM = mktResults.filter(r=>r.vehicle.body==="QM").length;
+    data.push([mkt, mktResults.length, mSW, mQM, (mktResults.length/totalVeh*100).toFixed(1)+"%"]);
+    const bg = mktColors[mkt]||"FFFFFF";
+    for (let c=0;c<5;c++) {
+      styles[mRow+","+c] = {fill:{fgColor:{rgb:bg}},font:{bold:c===0,sz:10,color:{rgb:"1D1D1D"}},border:bdr,
+        alignment:c>0?{horizontal:"center"}:undefined};
+    }
+    mRow++;
+  });
+  data.push(["Total", totalVeh, swCount, qmCount, "100%"]);
+  for (let c=0;c<5;c++) styles[mRow+","+c] = {fill:{fgColor:{rgb:"1D1D1D"}},font:{color:{rgb:"FFFFFF"},bold:true,sz:10},
+    alignment:c>0?{horizontal:"center"}:undefined};
+  mRow++;
+
+  data.push([]);
+  mRow++;
+
+  // Dealer breakdown
+  data.push(["DEALER BREAKDOWN","","","","",""]);
+  styles[mRow+",0"] = {fill:{fgColor:{rgb:"1D1D1D"}},font:{color:{rgb:"FFFFFF"},bold:true,sz:10}};
+  merges.push({s:{r:mRow,c:0},e:{r:mRow,c:5}});
+  mRow++;
+
+  data.push(["Dealer","Market","Units","SW","QM","Avg Score"]);
+  for (let c=0;c<6;c++) styles[mRow+","+c] = hdrS;
+  mRow++;
+
+  const byDealer = {};
+  results.forEach(r => {
+    if (!byDealer[r.dealer]) byDealer[r.dealer] = {market:r.market,total:0,sw:0,qm:0,scoreSum:0};
+    byDealer[r.dealer].total++;
+    if (r.vehicle.body==="SW") byDealer[r.dealer].sw++;
+    else byDealer[r.dealer].qm++;
+    byDealer[r.dealer].scoreSum += r.score;
+  });
+  Object.keys(byDealer).sort().forEach((d,i) => {
+    const dd = byDealer[d];
+    const z = i%2===0 ? "FFFFFF" : "F7F6F4";
+    data.push([d, dd.market, dd.total, dd.sw, dd.qm, (dd.scoreSum/dd.total).toFixed(3)]);
+    for (let c=0;c<6;c++) {
+      styles[mRow+","+c] = {fill:{fgColor:{rgb:z}},font:{bold:c===0,sz:9,color:{rgb:"1D1D1D"}},border:bdr,
+        alignment:c>1?{horizontal:"center"}:undefined};
+    }
+    mRow++;
+  });
+
+  data.push([]);
+  mRow++;
+
+  // Trim breakdown
+  data.push(["TRIM BREAKDOWN","","",""]);
+  styles[mRow+",0"] = {fill:{fgColor:{rgb:"1D1D1D"}},font:{color:{rgb:"FFFFFF"},bold:true,sz:10}};
+  merges.push({s:{r:mRow,c:0},e:{r:mRow,c:3}});
+  mRow++;
+
+  data.push(["Trim","Units","SW","QM"]);
+  for (let c=0;c<4;c++) styles[mRow+","+c] = hdrS;
+  mRow++;
+
+  const byTrim = {};
+  results.forEach(r => {
+    const t = r.vehicle.trim||"Unknown";
+    if (!byTrim[t]) byTrim[t] = {total:0,sw:0,qm:0};
+    byTrim[t].total++;
+    if (r.vehicle.body==="SW") byTrim[t].sw++; else byTrim[t].qm++;
+  });
+  Object.keys(byTrim).sort((a,b)=>byTrim[b].total-byTrim[a].total).forEach((t,i) => {
+    const z = i%2===0 ? "FFFFFF" : "F7F6F4";
+    data.push([t, byTrim[t].total, byTrim[t].sw, byTrim[t].qm]);
+    for (let c=0;c<4;c++) styles[mRow+","+c] = {fill:{fgColor:{rgb:z}},font:{sz:9,color:{rgb:"1D1D1D"}},border:bdr,
+      alignment:c>0?{horizontal:"center"}:undefined};
+    mRow++;
+  });
+
+  data.push([]);
+  mRow++;
+
+  // Color breakdown
+  data.push(["COLOR BREAKDOWN","","",""]);
+  styles[mRow+",0"] = {fill:{fgColor:{rgb:"1D1D1D"}},font:{color:{rgb:"FFFFFF"},bold:true,sz:10}};
+  merges.push({s:{r:mRow,c:0},e:{r:mRow,c:3}});
+  mRow++;
+
+  data.push(["Ext Color","Units","% of Total",""]);
+  for (let c=0;c<3;c++) styles[mRow+","+c] = hdrS;
+  mRow++;
+
+  const byColor = {};
+  results.forEach(r => { const c=r.vehicle.color||"Unknown"; byColor[c]=(byColor[c]||0)+1; });
+  const extBg2 = {"Britannia Blue":"1B2D4F","Sela Green":"4A5E3A","Eldoret Blue":"2E6B9E",
+    "Scottish White":"E8E4DC","Sterling Silver":"C0C0C0","Magic Mushroom":"A89878",
+    "Shale Blue":"6B8A99","Donny Grey":"7A7A7A","Inky Black":"1A1A1A",
+    "Solid Paint Red":"CC2222","Queen's Red":"8B1A1A"};
+  Object.keys(byColor).sort((a,b)=>byColor[b]-byColor[a]).forEach((cl,i) => {
+    data.push([cl, byColor[cl], (byColor[cl]/totalVeh*100).toFixed(1)+"%"]);
+    const bg = extBg2[cl] || (i%2===0 ? "FFFFFF" : "F7F6F4");
+    const fc = extBg2[cl] ? "FFFFFF" : "1D1D1D";
+    styles[mRow+",0"] = {fill:{fgColor:{rgb:bg}},font:{bold:true,sz:9,color:{rgb:fc}},border:bdr};
+    for (let c=1;c<3;c++) styles[mRow+","+c] = {fill:{fgColor:{rgb:i%2===0?"FFFFFF":"F7F6F4"}},
+      font:{sz:9,color:{rgb:"1D1D1D"}},border:bdr,alignment:{horizontal:"center"}};
+    mRow++;
+  });
+
+  const ws3 = XLSX.utils.aoa_to_sheet(data);
+  ws3['!merges'] = merges;
+  for (const key in styles) {
+    const [r,c] = key.split(",").map(Number);
+    const addr = XLSX.utils.encode_cell({r,c});
+    if (!ws3[addr]) ws3[addr] = {v:"",t:"s"};
+    ws3[addr].s = styles[key];
+  }
+  ws3['!cols'] = [{wch:24},{wch:12},{wch:10},{wch:10},{wch:12},{wch:12},{wch:12},{wch:14}];
+
+  // Protect Internal Summary sheet
+  ws3['!protect'] = { password: "montvale", sheet: true, objects: true, scenarios: true,
+    formatCells: false, formatColumns: false, formatRows: false, sort: false, autoFilter: false };
+
+  XLSX.utils.book_append_sheet(wb, ws3, "Internal Summary");
+}
+
+</script>
+</body></html>
