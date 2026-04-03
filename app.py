@@ -55,10 +55,11 @@ async def allocation():
 
 @app.get("/upload", response_class=HTMLResponse)
 async def upload_page(request: Request):
-    return templates.TemplateResponse("upload.html", {
-        "request": request,
-        "status": status,
-    })
+    return templates.TemplateResponse(
+        request=request,
+        name="upload.html",
+        context={"status": status},
+    )
 
 
 @app.post("/upload")
