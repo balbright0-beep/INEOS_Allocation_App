@@ -1,12 +1,23 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>INEOS Grenadier — Vehicle Allocation Tool</title>
+<link rel="stylesheet" href="https://ineos-americas-platform.onrender.com/ids.css">
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.min.js"></script>
+<script>
+// Theme init
+(function(){const t=localStorage.getItem('ids-theme');if(t)document.documentElement.setAttribute('data-theme',t);else if(window.matchMedia('(prefers-color-scheme:dark)').matches)document.documentElement.setAttribute('data-theme','dark')})();
+</script>
 <style>
-:root{--onyx:#1D1D1D;--charcoal:#171717;--flare:#FF4639;--mush:#D9D7D0;--mush-lt:#FAFAF9;--iron:#606060;--silver:#9F9F9F;--dove:#E9E8E5;--alab:#E3E1DC;--ok:#2C931E;--err:#8B1A1A;--warn:#9A6B00;--bg:#F5F4F2;
+:root{
+/* Alias to IDS tokens */
+--onyx:var(--ids-text-primary);--charcoal:var(--ids-surface-sidebar);--flare:var(--ids-accent);
+--mush:var(--ids-border-default);--mush-lt:var(--ids-surface-page);--iron:var(--ids-text-secondary);
+--silver:var(--ids-text-disabled);--dove:var(--ids-border-subtle);--alab:var(--ids-surface-sunken);
+--ok:var(--ids-success);--err:var(--ids-error);--warn:#9A6B00;
+--bg:var(--ids-surface-page);
 --c-ctr:#2C931E;--c-ne:#534AB7;--c-se:#185FA5;--c-w:#BA7517}
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--onyx);-webkit-font-smoothing:antialiased;font-size:13px}
+body{font-family:var(--ids-font-body);background:var(--bg);color:var(--onyx);-webkit-font-smoothing:antialiased;font-size:13px}
 .hd{background:var(--charcoal);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
 .hd .logo{color:var(--flare);font-weight:700;font-size:13px;letter-spacing:2px}
 .hd .sub{color:var(--silver);font-size:11px;margin-top:1px}
@@ -17,14 +28,15 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:v
 .tab.on{color:#fff;border-bottom-color:var(--flare)}
 .wrap{max-width:1920px;margin:0 auto;padding:20px 32px}
 .page{display:none}.page.on{display:block}
-.card{background:#fff;border-radius:8px;border:1px solid var(--dove);padding:16px;margin-bottom:16px;overflow-x:auto}
+.card{background:var(--ids-surface-card,#fff);border-radius:var(--ids-radius,6px);border:1px solid var(--dove);padding:16px;margin-bottom:16px;overflow-x:auto;transition:all 200ms cubic-bezier(0.25,0.46,0.45,0.94)}
 .card-t{font-size:11px;font-weight:700;color:var(--iron);text-transform:uppercase;letter-spacing:.7px;margin-bottom:12px}
 .krow{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px}
-.kpi{background:#fff;border-radius:8px;padding:14px 16px;border:1px solid var(--dove);position:relative;overflow:hidden}
+.kpi{background:var(--ids-surface-card,#fff);border-radius:var(--ids-radius,6px);padding:14px 16px;border:1px solid var(--dove);position:relative;overflow:hidden;transition:all 200ms cubic-bezier(0.25,0.46,0.45,0.94)}
+.kpi:hover{box-shadow:var(--ids-shadow-sm,0 1px 3px rgba(0,0,0,0.08));transform:translateY(-1px)}
 .kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--dove)}
 .kpi.a::before{background:var(--flare)}
 .kpi-l{font-size:10px;font-weight:600;color:var(--iron);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
-.kpi-v{font-size:24px;font-weight:700;color:var(--onyx);letter-spacing:-.3px}
+.kpi-v{font-family:var(--ids-font-heading);font-size:24px;font-weight:700;color:var(--onyx);letter-spacing:-.03em;font-variant-numeric:tabular-nums}
 .kpi-s{font-size:10px;color:var(--silver);margin-top:2px}
 table{width:100%;border-collapse:collapse;font-size:11px;white-space:nowrap}
 th{text-align:left;padding:6px 7px;font-weight:600;color:#fff;text-transform:uppercase;font-size:9px;letter-spacing:.5px;border-bottom:none;position:sticky;top:0;background:var(--charcoal);z-index:1}
