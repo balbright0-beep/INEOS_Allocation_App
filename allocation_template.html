@@ -3458,11 +3458,20 @@ function exportPrimaryEmailHTML() {
   let emailHtml = '<!DOCTYPE html><html><head><meta charset="UTF-8">';
   emailHtml += '<meta name="viewport" content="width=device-width,initial-scale=1">';
   emailHtml += '<title>Primary Production Recommendation — ' + monthYear + '</title>';
-  emailHtml += '</head>';
-  emailHtml += '<body style="margin:0;padding:24px;background:#FAFAF9;font-family:Arial,Helvetica,sans-serif;color:#1D1D1D">';
+  emailHtml += '<style>';
+  emailHtml += 'body{margin:0;padding:24px;background:#FAFAF9;font-family:Arial,Helvetica,sans-serif;color:#1D1D1D}';
+  emailHtml += '.copy-btn{display:inline-block;padding:8px 18px;background:#FF4639;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}';
+  emailHtml += '.copy-btn:hover{background:#E63E32}';
+  emailHtml += '.copy-ok{display:inline-block;margin-left:10px;font-size:11px;color:#2E7D32;font-weight:600;opacity:0;transition:opacity .3s}';
+  emailHtml += '.copy-ok.show{opacity:1}';
+  emailHtml += '@media print{.no-print{display:none!important}}';
+  emailHtml += '</style></head>';
+  emailHtml += '<body>';
 
+  let dealerIdx = 0;
   primaryResults.forEach((d, di) => {
     if (d.allRecs.length === 0) return;
+    const idx = dealerIdx++;
     const swCount = d.swUnits;
     const qmCount = d.qmUnits;
     const bodyParts = [];
@@ -3470,10 +3479,17 @@ function exportPrimaryEmailHTML() {
     if (qmCount > 0) bodyParts.push(qmCount + " Quartermaster");
     const ms = d.bAvg > 0 ? Math.round(d.dealer.og / d.bAvg * 30) : 0;
 
-    // Outer card
-    emailHtml += '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:900px;width:900px;margin:0 auto 28px;background:#FFFFFF;border:1px solid #E3E1DC;border-radius:8px;overflow:hidden">';
+    // Copy-to-email button bar (won't print)
+    emailHtml += '<div class="no-print" style="max-width:900px;margin:0 auto 8px;display:flex;align-items:center;gap:8px">';
+    emailHtml += '<button class="copy-btn" onclick="copyEmail(' + idx + ')">Copy to Email — ' + d.dealer.name + '</button>';
+    emailHtml += '<span class="copy-ok" id="ok' + idx + '">Copied to clipboard</span>';
+    emailHtml += '</div>';
+
+    // Outer card — this is the part that gets copied
+    emailHtml += '<div id="email' + idx + '" style="max-width:900px;margin:0 auto 28px">';
 
     // Header bar
+    emailHtml += '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;background:#FFFFFF;border:1px solid #E3E1DC;border-radius:8px;overflow:hidden">';
     emailHtml += '<tr><td style="padding:0">';
     emailHtml += '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">';
     emailHtml += '<tr><td bgcolor="#1D1D1D" style="padding:14px 20px;border-top:3px solid #FF4639">';
@@ -3482,14 +3498,13 @@ function exportPrimaryEmailHTML() {
     emailHtml += '<td align="right" style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#9F9F9F">' + d.allRecs.length + ' unit' + (d.allRecs.length !== 1 ? 's' : '') + ' | ' + (d.market || '') + '</td>';
     emailHtml += '</tr></table></td></tr></table>';
 
-    // Body
+    // Email body content
     emailHtml += '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">';
-    emailHtml += '<tr><td style="padding:20px 24px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.7;color:#1D1D1D">';
+    emailHtml += '<tr><td id="body' + idx + '" style="padding:20px 24px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.7;color:#1D1D1D">';
 
     emailHtml += '<p style="margin:0 0 12px">Hi ' + d.dealer.name + ',</p>';
     emailHtml += '<p style="margin:0 0 12px">Based on your sales performance, you\'ve earned <strong>' + d.allRecs.length + ' unit' + (d.allRecs.length !== 1 ? 's' : '') + '</strong> (' + bodyParts.join(", ") + ') for our <strong>' + monthYear + ' Primary Production Recommendation</strong>. Below are the recommended specifications for your upcoming production allocation.</p>';
 
-    // Metrics box
     emailHtml += '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:12px 0"><tr><td bgcolor="#F7F6F4" style="padding:12px 14px;border:1px solid #E9E8E5;border-radius:6px;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#444">';
     emailHtml += '<strong style="color:#1D1D1D">How Your Allocation Was Determined</strong><br>';
     emailHtml += 'Your store\'s current metrics: <strong>' + ms + '-day supply</strong>, <strong>' + d.bAvg.toFixed(1) + ' avg monthly sales rate</strong>, and <strong>' + d.bSoN.toFixed(1) + '% share of nation</strong>.';
@@ -3498,9 +3513,9 @@ function exportPrimaryEmailHTML() {
     emailHtml += '<p style="margin:12px 0">Please review the specifications below and <strong>place your orders in SAP</strong> accordingly. If you would like to adjust any specs before ordering, reach out to your RBM.</p>';
 
     // Spec table
+    const thStyle = 'padding:7px 6px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#fff;background:#1D1D1D;border-bottom:none';
     emailHtml += '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;font-size:11px;margin:14px 0">';
     emailHtml += '<tr>';
-    const thStyle = 'padding:7px 6px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#fff;background:#1D1D1D;border-bottom:none';
     ['#','Body','Trim','Ext Color','Interior','Roof','Frame','Wheels','Tyres','Safari','Tow'].forEach(h => {
       emailHtml += '<th style="' + thStyle + '">' + h + '</th>';
     });
@@ -3534,8 +3549,33 @@ function exportPrimaryEmailHTML() {
     emailHtml += monthYear + ' Primary Production Recommendation | INEOS Grenadier Americas';
     emailHtml += '</td></tr></table>';
 
-    emailHtml += '</td></tr></table>'; // close outer card
+    emailHtml += '</td></tr></table>'; // close outer table
+    emailHtml += '</div>'; // close #emailN wrapper
   });
+
+  // Inline script for the copy buttons
+  emailHtml += '<script>';
+  emailHtml += 'function copyEmail(idx){';
+  emailHtml += '  var el=document.getElementById("body"+idx);if(!el)return;';
+  emailHtml += '  var html=el.innerHTML;';
+  emailHtml += '  var text=el.innerText;';
+  emailHtml += '  if(navigator.clipboard&&navigator.clipboard.write){';
+  emailHtml += '    navigator.clipboard.write([new ClipboardItem({';
+  emailHtml += '      "text/html":new Blob([html],{type:"text/html"}),';
+  emailHtml += '      "text/plain":new Blob([text],{type:"text/plain"})';
+  emailHtml += '    })]).then(function(){';
+  emailHtml += '      var ok=document.getElementById("ok"+idx);';
+  emailHtml += '      if(ok){ok.classList.add("show");setTimeout(function(){ok.classList.remove("show")},2500);}';
+  emailHtml += '    });';
+  emailHtml += '  }else{';
+  emailHtml += '    var r=document.createRange();r.selectNodeContents(el);';
+  emailHtml += '    var s=window.getSelection();s.removeAllRanges();s.addRange(r);';
+  emailHtml += '    document.execCommand("copy");s.removeAllRanges();';
+  emailHtml += '    var ok=document.getElementById("ok"+idx);';
+  emailHtml += '    if(ok){ok.classList.add("show");setTimeout(function(){ok.classList.remove("show")},2500);}';
+  emailHtml += '  }';
+  emailHtml += '}';
+  emailHtml += '<\/script>';
 
   emailHtml += '</body></html>';
   const blob = new Blob([emailHtml], {type: 'text/html'});
