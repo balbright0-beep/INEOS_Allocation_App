@@ -3360,11 +3360,59 @@ function renderPrimaryEmails() {
   document.getElementById("prEmailContainer").innerHTML = html;
 }
 
+function buildPrimaryEmailHTML(d) {
+  const sender = document.getElementById("prEmailSender").value || "[RBM Name]";
+  const today = new Date();
+  const monthYear = today.toLocaleString("en-US", {month:"long"}) + " " + today.getFullYear();
+  const bodyParts = [];
+  if (d.swUnits > 0) bodyParts.push(d.swUnits + " Station Wagon");
+  if (d.qmUnits > 0) bodyParts.push(d.qmUnits + " Quartermaster");
+  const ms = d.bAvg > 0 ? Math.round(d.dealer.og / d.bAvg * 30) : 0;
+  const thS = 'padding:7px 6px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#fff;background:#1D1D1D';
+
+  let h = '';
+  h += '<div style="max-width:900px;font-family:Arial,Helvetica,sans-serif;color:#1D1D1D;font-size:13px;line-height:1.7">';
+  h += '<p>Hi ' + d.dealer.name + ',</p>';
+  h += '<p>Based on your sales performance, you\'ve earned <strong>' + d.allRecs.length + ' unit' + (d.allRecs.length !== 1 ? 's' : '') + '</strong> (' + bodyParts.join(", ") + ') for our <strong>' + monthYear + ' Primary Production Recommendation</strong>. Below are the recommended specifications for your upcoming production allocation.</p>';
+  h += '<div style="background:#F7F6F4;border:1px solid #E9E8E5;border-radius:6px;padding:12px 14px;margin:12px 0;font-size:11px;color:#444"><strong style="color:#1D1D1D">How Your Allocation Was Determined</strong><br>Your store\'s current metrics: <strong>' + ms + '-day supply</strong>, <strong>' + d.bAvg.toFixed(1) + ' avg monthly sales rate</strong>, and <strong>' + d.bSoN.toFixed(1) + '% share of nation</strong>.</div>';
+  h += '<p>Please review the specifications below and <strong>place your orders in SAP</strong> accordingly. If you would like to adjust any specs before ordering, reach out to your RBM.</p>';
+  h += '<table style="width:100%;border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;font-size:11px;margin:14px 0">';
+  h += '<tr>';
+  ['#','Body','Trim','Ext Color','Interior','Roof','Frame','Wheels','Tyres','Safari','Tow'].forEach(c => { h += '<th style="' + thS + '">' + c + '</th>'; });
+  h += '</tr>';
+  d.allRecs.forEach((r, vi) => {
+    const bg = vi % 2 === 0 ? '#FFFFFF' : '#FAFAF9';
+    const td = 'padding:5px 6px;border-bottom:1px solid #eee;background:' + bg;
+    h += '<tr>';
+    h += '<td style="' + td + ';font-weight:600;color:#FF4639">' + r.unit + '</td>';
+    h += '<td style="' + td + '">' + r.body + '</td>';
+    h += '<td style="' + td + '">' + r.trim + '</td>';
+    h += '<td style="' + td + '">' + (r.color || '') + '</td>';
+    h += '<td style="' + td + '">' + (r.seats || '') + '</td>';
+    h += '<td style="' + td + '">' + (r.roof || '') + '</td>';
+    h += '<td style="' + td + '">' + (r.frame || '') + '</td>';
+    h += '<td style="' + td + '">' + (r.wheels || '') + '</td>';
+    h += '<td style="' + td + '">' + (r.tyres || '') + '</td>';
+    h += '<td style="' + td + '">' + (r.safari || '') + '</td>';
+    h += '<td style="' + td + '">' + (r.tow || '') + '</td>';
+    h += '</tr>';
+  });
+  h += '</table>';
+  h += '<p>Please place your orders in SAP by the deadline communicated by your RBM. Let me know if you have any questions.</p>';
+  h += '<p>Best regards,<br><strong>' + sender + '</strong></p>';
+  h += '</div>';
+  return h;
+}
+
 function copyPrimarySingleEmail(idx) {
-  const el = document.getElementById("prEmailBody" + idx);
-  if (!el) return;
-  const htmlContent = el.innerHTML;
-  const textContent = el.innerText;
+  const d = primaryResults[idx];
+  if (!d || d.allRecs.length === 0) return;
+  const htmlContent = buildPrimaryEmailHTML(d);
+  // Plain text fallback
+  const tmp = document.createElement("div");
+  tmp.innerHTML = htmlContent;
+  const textContent = tmp.innerText;
+
   if (navigator.clipboard && navigator.clipboard.write) {
     navigator.clipboard.write([new ClipboardItem({
       "text/html": new Blob([htmlContent], {type: "text/html"}),
@@ -3374,14 +3422,9 @@ function copyPrimarySingleEmail(idx) {
       if (msg) { msg.classList.add("show"); setTimeout(() => msg.classList.remove("show"), 2000); }
     });
   } else {
-    // Fallback: select and copy
     const range = document.createRange();
-    range.selectNodeContents(el);
-    const sel = window.getSelection();
-    sel.removeAllRanges();
-    sel.addRange(range);
-    document.execCommand("copy");
-    sel.removeAllRanges();
+    const el = document.getElementById("prEmailBody" + idx);
+    if (el) { range.selectNodeContents(el); const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range); document.execCommand("copy"); sel.removeAllRanges(); }
     const msg = document.getElementById("prCopyMsg" + idx);
     if (msg) { msg.classList.add("show"); setTimeout(() => msg.classList.remove("show"), 2000); }
   }
@@ -3390,12 +3433,13 @@ function copyPrimarySingleEmail(idx) {
 function copyAllPrimaryEmails() {
   let htmlAll = "";
   let textAll = "";
-  primaryResults.forEach((d, di) => {
-    const el = document.getElementById("prEmailBody" + di);
-    if (el) {
-      htmlAll += el.innerHTML + "<br><hr style='border:1px solid #ddd;margin:20px 0'><br>";
-      textAll += el.innerText + "\n\n---\n\n";
-    }
+  primaryResults.forEach((d) => {
+    if (d.allRecs.length === 0) return;
+    const dealerHtml = buildPrimaryEmailHTML(d);
+    htmlAll += dealerHtml + '<hr style="border:1px solid #E3E1DC;margin:28px 0">';
+    const tmp = document.createElement("div");
+    tmp.innerHTML = dealerHtml;
+    textAll += tmp.innerText + "\n\n---\n\n";
   });
   if (navigator.clipboard && navigator.clipboard.write) {
     navigator.clipboard.write([new ClipboardItem({
