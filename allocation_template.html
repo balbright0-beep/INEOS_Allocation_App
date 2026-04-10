@@ -558,7 +558,7 @@ tr.tot td{background:var(--onyx)!important;color:#fff;font-weight:700;border-bot
     <div style="font-size:10px;color:var(--silver);margin-top:2px">Distributed proportionally across dealers by demand score</div>
    </div>
    <div class="setting">
-    <label>Model Selection</label>
+    <label>Body Type</label>
     <div style="display:flex;gap:10px;margin-top:6px">
      <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:12px;padding:6px 12px;border:1px solid var(--dove);border-radius:6px;text-transform:none;letter-spacing:0">
       <input type="radio" name="prModel" value="SW" style="cursor:pointer"> SW Only
@@ -570,6 +570,13 @@ tr.tot td{background:var(--onyx)!important;color:#fff;font-weight:700;border-bot
       <input type="radio" name="prModel" value="BOTH" checked style="cursor:pointer"> Both
      </label>
     </div>
+   </div>
+   <div class="setting">
+    <label>Model Years (check all that apply)</label>
+    <div id="prMYCheckboxes" style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap">
+     <span style="font-size:11px;color:var(--silver)">Loading model years...</span>
+    </div>
+    <div style="font-size:10px;color:var(--silver);margin-top:4px">Only checked model years will be included in recommendations</div>
    </div>
    <div class="setting" id="prSplitSetting">
     <label>SW : QM Ratio — <span id="prSplitLabel" style="color:var(--flare);font-size:14px">70 : 30</span></label>
@@ -676,6 +683,7 @@ async function fetchHubData() {
     // Refresh all data-dependent views
     if (typeof renderDealerTable === "function") renderDealerTable();
     if (typeof updateDealerKpis === "function") updateDealerKpis();
+    if (typeof populateMYCheckboxes === "function") populateMYCheckboxes();
 
     // Enable the Run button if vehicles are already uploaded in the pool
     if (matchedVehicles.length > 0) {
@@ -2843,16 +2851,47 @@ document.querySelectorAll('input[name="prModel"]').forEach(r => {
   });
 });
 
+// --- Populate MY checkboxes from loaded data ---
+function populateMYCheckboxes() {
+  const mys = new Set();
+  V_DATA.forEach(row => {
+    const v = decodeVehicle(row);
+    if (v.my && v.my !== "nan" && v.my !== "NaN") mys.add(v.my);
+  });
+  const sorted = [...mys].sort();
+  const container = document.getElementById("prMYCheckboxes");
+  if (sorted.length === 0) {
+    container.innerHTML = '<span style="font-size:11px;color:var(--silver)">No model year data available</span>';
+    return;
+  }
+  container.innerHTML = sorted.map(my =>
+    '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:12px;padding:6px 12px;border:1px solid var(--dove);border-radius:6px;text-transform:none;letter-spacing:0">' +
+    '<input type="checkbox" class="prMYCb" value="' + my + '" checked style="cursor:pointer"> ' + my +
+    '</label>'
+  ).join('');
+}
+
+function getSelectedMYs() {
+  const cbs = document.querySelectorAll('.prMYCb:checked');
+  return new Set([...cbs].map(cb => cb.value));
+}
+
 // --- Config Universe: extract real production configs from V_DATA ---
 function buildConfigUniverse() {
+  const selectedMYs = getSelectedMYs();
   const configs = {};
   V_DATA.forEach(row => {
     const v = decodeVehicle(row);
-    // Skip sold vehicles — we want configs that are still being produced
+    // Filter by selected model years
+    if (selectedMYs.size > 0 && !selectedMYs.has(v.my)) return;
+    // Skip vehicles with missing key fields or "nan" strings
     if (!v.body || !v.trim || !v.color) return;
-    const key = v.body + "|" + v.trim + "|" + v.color;
+    if (v.trim === "nan" || v.color === "nan" || v.body === "nan") return;
+    // Sanitize "nan"/"NaN" strings to empty
+    const _c = s => (!s || s === "nan" || s === "NaN" || s === "None") ? "" : s;
+    const key = v.body + "|" + v.trim + "|" + _c(v.color);
     if (!configs[key]) {
-      configs[key] = { body: v.body, trim: v.trim, color: v.color, specCombos: {} };
+      configs[key] = { body: v.body, trim: v.trim, color: _c(v.color), specCombos: {} };
     }
     // Track sub-spec combinations (everything below body|trim|color)
     const subKey = [v.seats, v.roof, v.safari, v.wheels, v.tyres,
@@ -2860,21 +2899,21 @@ function buildConfigUniverse() {
       v.sound, v.privacy_glass, v.air_intake, v.winch,
       v.aux_battery, v.carpet, v.compass, v.centre_diff,
       v.floor_trim, v.utility_rails, v.spare_wheel, v.front_tow,
-      v.bump_strips, v.steering, v.wheel_locks].join("|");
+      v.bump_strips, v.steering, v.wheel_locks].map(_c).join("|");
     if (!configs[key].specCombos[subKey]) {
       configs[key].specCombos[subKey] = { count: 0, specs: {
-        seats: v.seats, roof: v.roof, safari: v.safari,
-        wheels: v.wheels, tyres: v.tyres, frame: v.frame,
-        tow: v.tow, heated_seats: v.heated_seats,
-        diff_locks: v.diff_locks, ladder: v.ladder,
-        sound: v.sound, privacy_glass: v.privacy_glass,
-        air_intake: v.air_intake, winch: v.winch,
-        aux_battery: v.aux_battery, carpet: v.carpet,
-        compass: v.compass, centre_diff: v.centre_diff,
-        floor_trim: v.floor_trim, utility_rails: v.utility_rails,
-        spare_wheel: v.spare_wheel, front_tow: v.front_tow,
-        bump_strips: v.bump_strips, steering: v.steering,
-        wheel_locks: v.wheel_locks, pack: v.pack
+        seats: _c(v.seats), roof: _c(v.roof), safari: _c(v.safari),
+        wheels: _c(v.wheels), tyres: _c(v.tyres), frame: _c(v.frame),
+        tow: _c(v.tow), heated_seats: _c(v.heated_seats),
+        diff_locks: _c(v.diff_locks), ladder: _c(v.ladder),
+        sound: _c(v.sound), privacy_glass: _c(v.privacy_glass),
+        air_intake: _c(v.air_intake), winch: _c(v.winch),
+        aux_battery: _c(v.aux_battery), carpet: _c(v.carpet),
+        compass: _c(v.compass), centre_diff: _c(v.centre_diff),
+        floor_trim: _c(v.floor_trim), utility_rails: _c(v.utility_rails),
+        spare_wheel: _c(v.spare_wheel), front_tow: _c(v.front_tow),
+        bump_strips: _c(v.bump_strips), steering: _c(v.steering),
+        wheel_locks: _c(v.wheel_locks), pack: _c(v.pack)
       }};
     }
     configs[key].specCombos[subKey].count++;
