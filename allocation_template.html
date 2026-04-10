@@ -618,10 +618,12 @@ tr.tot td{background:var(--onyx)!important;color:#fff;font-weight:700;border-bot
      <input type="text" id="prEmailCustomMsg" value="" placeholder="e.g. Please confirm your preferred specs within 5 business days..." style="width:100%;padding:6px 10px;border:1px solid var(--dove);border-radius:4px;font-size:12px">
     </div>
    </div>
-   <div>
-    <button class="btn btn-primary" onclick="renderPrimaryEmails()">Generate Emails</button>
-    <button class="btn btn-outline" onclick="copyAllPrimaryEmails()" style="margin-left:6px">Copy All to Clipboard</button>
-    <button class="btn btn-secondary" onclick="exportPrimaryEmailHTML()" style="margin-left:6px">Export Email HTML File</button>
+   <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+    <button class="btn btn-primary" onclick="renderPrimaryEmails()">Generate Dealer Emails</button>
+    <button class="btn btn-outline" onclick="copyAllPrimaryEmails()">Copy All Dealer Emails</button>
+    <button class="btn btn-secondary" onclick="exportPrimaryEmailHTML()">Export Dealer Email HTML</button>
+    <span style="width:1px;height:24px;background:var(--dove);margin:0 6px"></span>
+    <button class="btn btn-primary" style="background:#534AB7" onclick="exportRBMLaunchEmail()">Export RBM Launch Email</button>
    </div>
   </div>
   <div id="prEmailContainer"></div>
@@ -3583,6 +3585,224 @@ function exportPrimaryEmailHTML() {
   const a = document.createElement('a');
   a.href = url;
   a.download = 'Primary_Recommendation_Emails_' + new Date().toISOString().slice(0, 10) + '.html';
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 100);
+}
+
+// --- RBM Launch Email ---
+function exportRBMLaunchEmail() {
+  if (primaryResults.length === 0) { alert("Generate recommendations first."); return; }
+  const today = new Date();
+  const monthYear = today.toLocaleString("en-US", {month:"long"}) + " " + today.getFullYear();
+  const totalUnits = primaryResults.reduce((s, d) => s + d.units, 0);
+  const totalSW = primaryResults.reduce((s, d) => s + d.swUnits, 0);
+  const totalQM = primaryResults.reduce((s, d) => s + d.qmUnits, 0);
+  const totalDealers = primaryResults.length;
+
+  // Group by market
+  const byMkt = {};
+  primaryResults.forEach(d => {
+    const m = d.market || "Other";
+    if (!byMkt[m]) byMkt[m] = [];
+    byMkt[m].push(d);
+  });
+  const mktOrder = ["Central","Northeast","Southeast","Western"];
+  const mktKeys = [...mktOrder.filter(m => byMkt[m]), ...Object.keys(byMkt).filter(m => !mktOrder.includes(m))];
+
+  const font = "font-family:Arial,Helvetica,sans-serif";
+  const thS = 'padding:8px 10px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#fff;background:#1D1D1D';
+
+  let h = '<!DOCTYPE html><html><head><meta charset="UTF-8">';
+  h += '<meta name="viewport" content="width=device-width,initial-scale=1">';
+  h += '<title>RBM Launch — ' + monthYear + ' Primary Allocation</title>';
+  h += '<style>';
+  h += 'body{margin:0;padding:24px;background:#FAFAF9;' + font + ';color:#1D1D1D}';
+  h += '.copy-btn{display:inline-block;padding:8px 18px;background:#534AB7;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;' + font + '}';
+  h += '.copy-btn:hover{background:#3C3489}';
+  h += '.copy-ok{display:inline-block;margin-left:10px;font-size:11px;color:#2E7D32;font-weight:600;opacity:0;transition:opacity .3s}';
+  h += '.copy-ok.show{opacity:1}';
+  h += '@media print{.no-print{display:none!important}}';
+  h += '</style></head><body>';
+
+  // ── Network-wide summary card (for the VP / head of sales) ──
+  h += '<div class="no-print" style="max-width:900px;margin:0 auto 8px;display:flex;align-items:center;gap:8px">';
+  h += '<button class="copy-btn" onclick="copyEmail(\'net\')">Copy Network Summary</button>';
+  h += '<span class="copy-ok" id="oknet">Copied to clipboard</span>';
+  h += '</div>';
+
+  h += '<div id="emailnet" style="max-width:900px;margin:0 auto 32px">';
+  h += '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;background:#fff;border:1px solid #E3E1DC;border-radius:8px;overflow:hidden">';
+
+  // Header
+  h += '<tr><td bgcolor="#1D1D1D" style="padding:18px 24px;border-top:3px solid #FF4639">';
+  h += '<div style="' + font + ';font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:#FF4639">INEOS Grenadier Americas</div>';
+  h += '<div style="' + font + ';font-size:20px;font-weight:700;color:#fff;margin-top:4px">' + monthYear + ' Primary Production Allocation</div>';
+  h += '<div style="' + font + ';font-size:12px;color:#9F9F9F;margin-top:4px">' + totalUnits + ' units across ' + totalDealers + ' retailers (' + totalSW + ' SW / ' + totalQM + ' QM)</div>';
+  h += '</td></tr>';
+
+  // Body
+  h += '<tr><td id="bodynet" style="padding:24px;' + font + ';font-size:13px;line-height:1.7;color:#1D1D1D">';
+  h += '<p style="margin:0 0 14px">Team,</p>';
+  h += '<p style="margin:0 0 14px">The <strong>' + monthYear + ' Primary Production Allocation</strong> is ready for launch. Below is the network summary by market. Each retailer has been assigned a recommended volume and spec mix based on their sales performance, month supply, and pipeline composition.</p>';
+
+  // KPI strip
+  h += '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:16px 0"><tr>';
+  var kpis = [
+    {label:"Total Units", val:totalUnits, color:"#FF4639"},
+    {label:"Station Wagon", val:totalSW, color:"#1D1D1D"},
+    {label:"Quartermaster", val:totalQM, color:"#1D1D1D"},
+    {label:"Retailers", val:totalDealers, color:"#1D1D1D"}
+  ];
+  kpis.forEach((k, ki) => {
+    h += '<td width="25%" valign="top" style="padding:' + (ki > 0 ? '0 0 0 10px' : '0') + '">';
+    h += '<div style="background:#FAFAF9;border:1px solid #E3E1DC;border-radius:6px;padding:12px 14px;border-top:2px solid ' + k.color + '">';
+    h += '<div style="' + font + ';font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:#727272">' + k.label + '</div>';
+    h += '<div style="' + font + ';font-size:24px;font-weight:700;color:' + k.color + ';margin-top:4px">' + k.val + '</div>';
+    h += '</div></td>';
+  });
+  h += '</tr></table>';
+
+  // Market breakdown tables
+  mktKeys.forEach(mkt => {
+    const dealers = byMkt[mkt].sort((a, b) => b.units - a.units);
+    const mktTotal = dealers.reduce((s, d) => s + d.units, 0);
+    const mktSW = dealers.reduce((s, d) => s + d.swUnits, 0);
+    const mktQM = dealers.reduce((s, d) => s + d.qmUnits, 0);
+
+    h += '<div style="margin:20px 0 6px;' + font + ';font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#727272">' + mkt + ' — ' + mktTotal + ' units (' + mktSW + ' SW / ' + mktQM + ' QM)</div>';
+    h += '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-collapse:collapse;' + font + ';font-size:11px;margin:0 0 10px">';
+    h += '<tr>';
+    ['Retailer','OG','Month Supply','Blended Avg','SoN %','Earned','SW','QM'].forEach(c => {
+      h += '<th style="' + thS + '">' + c + '</th>';
+    });
+    h += '</tr>';
+
+    dealers.forEach((d, di) => {
+      const bg = di % 2 === 0 ? '#fff' : '#FAFAF9';
+      const ms = d.bAvg > 0 ? Math.round(d.dealer.og / d.bAvg * 30) : 0;
+      const msColor = ms <= 45 ? '#2E7D32' : ms <= 90 ? '#9A6B00' : '#C4281D';
+      const td = 'padding:6px 10px;border-bottom:1px solid #eee;background:' + bg;
+      h += '<tr>';
+      h += '<td style="' + td + ';font-weight:600">' + d.dealer.name + '</td>';
+      h += '<td style="' + td + ';text-align:right">' + d.dealer.og + '</td>';
+      h += '<td style="' + td + ';text-align:right;color:' + msColor + ';font-weight:600">' + ms + 'd</td>';
+      h += '<td style="' + td + ';text-align:right">' + d.bAvg.toFixed(1) + '</td>';
+      h += '<td style="' + td + ';text-align:right">' + d.bSoN.toFixed(1) + '%</td>';
+      h += '<td style="' + td + ';text-align:right;font-weight:700;color:#FF4639">' + d.units + '</td>';
+      h += '<td style="' + td + ';text-align:right">' + d.swUnits + '</td>';
+      h += '<td style="' + td + ';text-align:right">' + d.qmUnits + '</td>';
+      h += '</tr>';
+    });
+
+    // Market total
+    h += '<tr><td style="padding:7px 10px;background:#F0EFEC;font-weight:700;border-top:1px solid #D9D7D0">' + mkt + ' Total</td>';
+    h += '<td style="padding:7px 10px;background:#F0EFEC;text-align:right;font-weight:700;border-top:1px solid #D9D7D0"></td>';
+    h += '<td style="padding:7px 10px;background:#F0EFEC;text-align:right;border-top:1px solid #D9D7D0"></td>';
+    h += '<td style="padding:7px 10px;background:#F0EFEC;text-align:right;border-top:1px solid #D9D7D0"></td>';
+    h += '<td style="padding:7px 10px;background:#F0EFEC;text-align:right;border-top:1px solid #D9D7D0"></td>';
+    h += '<td style="padding:7px 10px;background:#F0EFEC;text-align:right;font-weight:700;color:#FF4639;border-top:1px solid #D9D7D0">' + mktTotal + '</td>';
+    h += '<td style="padding:7px 10px;background:#F0EFEC;text-align:right;font-weight:700;border-top:1px solid #D9D7D0">' + mktSW + '</td>';
+    h += '<td style="padding:7px 10px;background:#F0EFEC;text-align:right;font-weight:700;border-top:1px solid #D9D7D0">' + mktQM + '</td>';
+    h += '</tr></table>';
+  });
+
+  h += '<div style="margin:20px 0 0;padding:14px 16px;background:#FAFAF9;border:1px solid #E3E1DC;border-radius:6px;' + font + ';font-size:12px;color:#606060">';
+  h += '<strong style="color:#1D1D1D">Next Steps</strong><br>';
+  h += '1. Review the dealer-level recommendations in the attached Dealer Email HTML file.<br>';
+  h += '2. Forward each dealer\'s individual email using the "Copy to Email" buttons.<br>';
+  h += '3. Dealers should <strong>place their orders in SAP</strong> by the deadline you communicate.<br>';
+  h += '4. Track order placement status and escalate any non-responders.';
+  h += '</div>';
+
+  h += '</td></tr>';
+
+  // Footer
+  h += '<tr><td bgcolor="#1D1D1D" style="padding:12px 24px;' + font + ';font-size:10px;color:#9F9F9F;text-align:center">';
+  h += monthYear + ' Primary Production Allocation | INEOS Grenadier Americas | Confidential — Internal Use Only';
+  h += '</td></tr>';
+
+  h += '</table></div>'; // close network summary card
+
+  // ── Per-market cards (one per RBM) ──
+  mktKeys.forEach((mkt, mi) => {
+    const dealers = byMkt[mkt].sort((a, b) => b.units - a.units);
+    const mktTotal = dealers.reduce((s, d) => s + d.units, 0);
+    const mktSW = dealers.reduce((s, d) => s + d.swUnits, 0);
+    const mktQM = dealers.reduce((s, d) => s + d.qmUnits, 0);
+
+    h += '<div class="no-print" style="max-width:900px;margin:28px auto 8px;display:flex;align-items:center;gap:8px">';
+    h += '<button class="copy-btn" onclick="copyEmail(\'mkt' + mi + '\')"">Copy ' + mkt + ' RBM Email</button>';
+    h += '<span class="copy-ok" id="okmkt' + mi + '">Copied to clipboard</span>';
+    h += '</div>';
+
+    h += '<div id="emailmkt' + mi + '" style="max-width:900px;margin:0 auto 12px">';
+    h += '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;background:#fff;border:1px solid #E3E1DC;border-radius:8px;overflow:hidden">';
+
+    h += '<tr><td bgcolor="#1D1D1D" style="padding:14px 20px;border-top:3px solid #FF4639">';
+    h += '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr>';
+    h += '<td style="' + font + ';font-size:15px;font-weight:700;color:#fff">' + mkt + ' Market</td>';
+    h += '<td align="right" style="' + font + ';font-size:12px;color:#9F9F9F">' + mktTotal + ' units | ' + dealers.length + ' retailers</td>';
+    h += '</tr></table></td></tr>';
+
+    h += '<tr><td id="bodymkt' + mi + '" style="padding:20px 24px;' + font + ';font-size:13px;line-height:1.7;color:#1D1D1D">';
+    h += '<p style="margin:0 0 12px">Hi ' + mkt + ' RBM,</p>';
+    h += '<p style="margin:0 0 12px">The <strong>' + monthYear + ' Primary Production Allocation</strong> has been finalized for your market. Your retailers have been allocated <strong>' + mktTotal + ' units</strong> (' + mktSW + ' SW / ' + mktQM + ' QM) based on their sales performance and inventory position.</p>';
+
+    h += '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-collapse:collapse;' + font + ';font-size:11px;margin:14px 0">';
+    h += '<tr>';
+    ['Retailer','OG','MS','Blended Avg','SoN %','Units','SW','QM'].forEach(c => {
+      h += '<th style="' + thS + '">' + c + '</th>';
+    });
+    h += '</tr>';
+    dealers.forEach((d, di) => {
+      const bg = di % 2 === 0 ? '#fff' : '#FAFAF9';
+      const ms = d.bAvg > 0 ? Math.round(d.dealer.og / d.bAvg * 30) : 0;
+      const msColor = ms <= 45 ? '#2E7D32' : ms <= 90 ? '#9A6B00' : '#C4281D';
+      const td = 'padding:6px 10px;border-bottom:1px solid #eee;background:' + bg;
+      h += '<tr>';
+      h += '<td style="' + td + ';font-weight:600">' + d.dealer.name + '</td>';
+      h += '<td style="' + td + ';text-align:right">' + d.dealer.og + '</td>';
+      h += '<td style="' + td + ';text-align:right;color:' + msColor + ';font-weight:600">' + ms + 'd</td>';
+      h += '<td style="' + td + ';text-align:right">' + d.bAvg.toFixed(1) + '</td>';
+      h += '<td style="' + td + ';text-align:right">' + d.bSoN.toFixed(1) + '%</td>';
+      h += '<td style="' + td + ';text-align:right;font-weight:700;color:#FF4639">' + d.units + '</td>';
+      h += '<td style="' + td + ';text-align:right">' + d.swUnits + '</td>';
+      h += '<td style="' + td + ';text-align:right">' + d.qmUnits + '</td>';
+      h += '</tr>';
+    });
+    h += '</table>';
+
+    h += '<p style="margin:12px 0">Please review the recommended specs for each retailer in the attached Dealer Email file and forward individually. Retailers should <strong>place their orders in SAP</strong> by the deadline you set.</p>';
+    h += '<p style="margin:12px 0">Best regards,<br><strong>INEOS Grenadier Americas — Vehicle Planning</strong></p>';
+
+    h += '</td></tr>';
+    h += '<tr><td bgcolor="#FAFAF9" style="padding:10px 20px;border-top:1px solid #E3E1DC;' + font + ';font-size:10px;color:#9F9F9F;text-align:center">';
+    h += monthYear + ' Primary Allocation — ' + mkt + ' Market | Confidential';
+    h += '</td></tr></table></div>';
+  });
+
+  // Copy script
+  h += '<script>';
+  h += 'function copyEmail(id){';
+  h += '  var el=document.getElementById("body"+id)||document.getElementById("email"+id);if(!el)return;';
+  h += '  var src=document.getElementById("body"+id)?el:el;';
+  h += '  var html=src.innerHTML;var text=src.innerText;';
+  h += '  if(navigator.clipboard&&navigator.clipboard.write){';
+  h += '    navigator.clipboard.write([new ClipboardItem({"text/html":new Blob([html],{type:"text/html"}),"text/plain":new Blob([text],{type:"text/plain"})})]).then(function(){';
+  h += '      var ok=document.getElementById("ok"+id);if(ok){ok.classList.add("show");setTimeout(function(){ok.classList.remove("show")},2500);}';
+  h += '    });';
+  h += '  }else{var r=document.createRange();r.selectNodeContents(src);var s=window.getSelection();s.removeAllRanges();s.addRange(r);document.execCommand("copy");s.removeAllRanges();';
+  h += '    var ok=document.getElementById("ok"+id);if(ok){ok.classList.add("show");setTimeout(function(){ok.classList.remove("show")},2500);}';
+  h += '  }';
+  h += '}';
+  h += '<\/script>';
+  h += '</body></html>';
+
+  const blob = new Blob([h], {type: 'text/html'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'Primary_Allocation_RBM_Launch_' + new Date().toISOString().slice(0, 10) + '.html';
   document.body.appendChild(a); a.click();
   setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 100);
 }
