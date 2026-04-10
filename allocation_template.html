@@ -616,15 +616,120 @@ tr.tot td{background:var(--onyx)!important;color:#fff;font-weight:700;border-bot
 </div><!-- /wrap -->
 
 <script>
-// === DATA INJECTED BY PYTHON ===
-const V_DATA=[];
-const V_DICT={};
-const DEALERS=[];
-const PLANT_AFFINITY={};
-const PIPELINE_COMP={};
-const SELL_THROUGH={};
-const DAYS_TO_SELL={};
-const DATA_TS="";
+// === DATA: FETCHED FROM HUB API OR INJECTED BY PYTHON ===
+// The data constants below start empty. They are populated either:
+//   1. By allocation_app.py (legacy Master File path — replaces these via regex)
+//   2. By fetchHubData() on page load (reads from Hub's /api/allocation/data)
+// Both paths produce the same 7 structures. The Hub API path is preferred
+// because it uses the individual source files uploaded through the Hub,
+// staying current without a Master File refresh.
+let V_DATA=[];
+let V_DICT={};
+let DEALERS=[];
+let PLANT_AFFINITY={};
+let PIPELINE_COMP={};
+let SELL_THROUGH={};
+let DAYS_TO_SELL={};
+let DATA_TS="";
+
+const HUB_URL = "https://ineos-americas-platform.onrender.com";
+
+async function fetchHubData() {
+  // Check if data was already injected by Python (non-empty V_DATA means
+  // allocation_app.py ran). In that case, skip the API fetch.
+  if (V_DATA.length > 0) {
+    console.log("[Allocation] Data already injected by Python — skipping Hub fetch.");
+    document.getElementById("tsLabel").textContent = "Data: Master File | " + DATA_TS;
+    return;
+  }
+
+  // Try to fetch from the Hub's API
+  const statusEl = document.getElementById("tsLabel");
+  statusEl.textContent = "Loading data from Hub...";
+
+  // Get auth token — the Hub uses JWT. The user needs to be logged in to the
+  // Hub for this to work. We store the token in sessionStorage under 'pu'.
+  let token = "";
+  try {
+    const pu = JSON.parse(sessionStorage.getItem("pu") || "{}");
+    token = pu.token || "";
+  } catch (e) {}
+
+  if (!token) {
+    // Try prompting for login
+    statusEl.textContent = "Hub login required — enter credentials below";
+    statusEl.innerHTML = '<span style="color:var(--warn)">Hub login required</span> ';
+    statusEl.innerHTML += '<input id="hubUser" placeholder="username" style="padding:4px 8px;border:1px solid var(--dove);border-radius:4px;font-size:11px;width:120px;margin:0 4px">';
+    statusEl.innerHTML += '<input id="hubPass" type="password" placeholder="password" style="padding:4px 8px;border:1px solid var(--dove);border-radius:4px;font-size:11px;width:120px;margin:0 4px">';
+    statusEl.innerHTML += '<button onclick="loginAndFetch()" class="btn btn-primary" style="padding:4px 12px;font-size:10px">Connect to Hub</button>';
+    return;
+  }
+
+  await _fetchFromHub(token);
+}
+
+async function loginAndFetch() {
+  const user = document.getElementById("hubUser").value;
+  const pass = document.getElementById("hubPass").value;
+  if (!user || !pass) return;
+  const statusEl = document.getElementById("tsLabel");
+  statusEl.textContent = "Logging in...";
+  try {
+    const res = await fetch(HUB_URL + "/api/auth/login", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({username: user, password: pass}),
+    });
+    if (!res.ok) throw new Error("Invalid credentials");
+    const data = await res.json();
+    sessionStorage.setItem("pu", JSON.stringify(data));
+    await _fetchFromHub(data.token);
+  } catch (e) {
+    statusEl.innerHTML = '<span style="color:var(--err)">Login failed: ' + e.message + '</span>';
+  }
+}
+
+async function _fetchFromHub(token) {
+  const statusEl = document.getElementById("tsLabel");
+  statusEl.textContent = "Fetching allocation data from Hub...";
+  try {
+    const res = await fetch(HUB_URL + "/api/allocation/data", {
+      headers: {"Authorization": "Bearer " + token},
+    });
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error("HTTP " + res.status + ": " + txt.substring(0, 200));
+    }
+    const d = await res.json();
+    V_DATA = d.V_DATA || [];
+    V_DICT = d.V_DICT || {};
+    DEALERS = d.DEALERS || [];
+    PLANT_AFFINITY = d.PLANT_AFFINITY || {};
+    PIPELINE_COMP = d.PIPELINE_COMP || {};
+    SELL_THROUGH = d.SELL_THROUGH || {};
+    DAYS_TO_SELL = d.DAYS_TO_SELL || {};
+    DATA_TS = d.DATA_TS || "";
+
+    // Rebuild VIN lookup
+    for (const row of V_DATA) {
+      VEHICLES[row[0].toUpperCase()] = row;
+    }
+
+    statusEl.textContent = "Data: Hub uploads | " + DATA_TS + " | " + V_DATA.length + " vehicles, " + DEALERS.length + " dealers";
+    console.log("[Allocation] Loaded from Hub: " + V_DATA.length + " vehicles, " + DEALERS.length + " dealers");
+
+    // Enable the Run button if vehicles are already uploaded in the pool
+    if (matchedVehicles.length > 0) {
+      document.getElementById("btnRun").disabled = false;
+    }
+  } catch (e) {
+    statusEl.innerHTML = '<span style="color:var(--err)">Hub fetch failed: ' + e.message + '</span>';
+    console.error("[Allocation] Hub fetch failed:", e);
+  }
+}
+
+// Auto-fetch on page load
+document.addEventListener("DOMContentLoaded", fetchHubData);
 
 // === DECODE COMPACT VEHICLES ===
 // V_DATA row format: [vin, so_no, msrp, so_value, dis, eta, vessel,
