@@ -159,7 +159,10 @@ tr.tot td{background:var(--onyx)!important;color:#fff;font-weight:700;border-bot
   <div class="logo">INEOS GRENADIER</div>
   <div class="sub">Vehicle Allocation Tool</div>
  </div>
- <div class="ts" id="tsLabel"></div>
+ <div style="display:flex;align-items:center;gap:10px">
+  <div class="ts" id="tsLabel"></div>
+  <button class="btn btn-outline" style="padding:4px 12px;font-size:10px;color:#fff;border-color:#555" onclick="fetchHubData()">Refresh Data</button>
+ </div>
 </div>
 
 <div class="tabs">
@@ -670,8 +673,9 @@ async function fetchHubData() {
     statusEl.textContent = "Hub | " + DATA_TS + " | " + V_DATA.length.toLocaleString() + " vehicles, " + DEALERS.length + " dealers";
     console.log("[Allocation] Loaded from Hub: " + V_DATA.length + " vehicles, " + DEALERS.length + " dealers");
 
-    // Refresh the Dealer Overview if we're on that tab
-    if (typeof renderDealerOverview === "function") renderDealerOverview();
+    // Refresh all data-dependent views
+    if (typeof renderDealerTable === "function") renderDealerTable();
+    if (typeof updateDealerKpis === "function") updateDealerKpis();
 
     // Enable the Run button if vehicles are already uploaded in the pool
     if (matchedVehicles.length > 0) {
