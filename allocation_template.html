@@ -167,6 +167,7 @@ tr.tot td{background:var(--onyx)!important;color:#fff;font-weight:700;border-bot
  <div class="tab" onclick="showTab(1)">Dealer Overview</div>
  <div class="tab" onclick="showTab(2)">Allocation</div>
  <div class="tab" onclick="showTab(3)" id="tabEmail" style="display:none">Email Output</div>
+ <div class="tab" onclick="showTab(4)">Primary Recommendation</div>
 </div>
 
 <div class="wrap">
@@ -533,6 +534,83 @@ tr.tot td{background:var(--onyx)!important;color:#fff;font-weight:700;border-bot
  </div>
 
  <div id="emailContainer"></div>
+</div>
+
+<!-- ===== TAB 4: PRIMARY RECOMMENDATION ===== -->
+<div class="page" id="pg4">
+
+ <div class="krow" id="prKpis">
+  <div class="kpi a"><div class="kpi-l">Units Distributed</div><div class="kpi-v" id="kPrUnits">—</div><div class="kpi-s">across network</div></div>
+  <div class="kpi"><div class="kpi-l">Dealers Receiving</div><div class="kpi-v" id="kPrDealers">—</div></div>
+  <div class="kpi"><div class="kpi-l">SW / QM Split</div><div class="kpi-v" id="kPrSplit">—</div></div>
+  <div class="kpi"><div class="kpi-l">Avg Score</div><div class="kpi-v" id="kPrScore">—</div></div>
+ </div>
+
+ <div class="card">
+  <div class="card-t">Primary Recommendation Settings</div>
+  <div class="settings-grid">
+   <div class="setting">
+    <label>Total Units to Distribute</label>
+    <input type="number" id="prTotalUnits" value="100" min="1" max="1000" step="1">
+    <div style="font-size:10px;color:var(--silver);margin-top:2px">Distributed proportionally across dealers by demand score</div>
+   </div>
+   <div class="setting">
+    <label>Model Selection</label>
+    <div style="display:flex;gap:10px;margin-top:6px">
+     <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:12px;padding:6px 12px;border:1px solid var(--dove);border-radius:6px;text-transform:none;letter-spacing:0">
+      <input type="radio" name="prModel" value="SW" style="cursor:pointer"> SW Only
+     </label>
+     <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:12px;padding:6px 12px;border:1px solid var(--dove);border-radius:6px;text-transform:none;letter-spacing:0">
+      <input type="radio" name="prModel" value="QM" style="cursor:pointer"> QM Only
+     </label>
+     <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:12px;padding:6px 12px;border:1px solid var(--dove);border-radius:6px;text-transform:none;letter-spacing:0;background:#fef8ec;border-color:#e8d9b0">
+      <input type="radio" name="prModel" value="BOTH" checked style="cursor:pointer"> Both
+     </label>
+    </div>
+   </div>
+   <div class="setting" id="prSplitSetting">
+    <label>SW : QM Ratio — <span id="prSplitLabel" style="color:var(--flare);font-size:14px">70 : 30</span></label>
+    <input type="range" id="prSWRatio" min="0" max="100" value="70" oninput="document.getElementById('prSplitLabel').textContent=this.value+' : '+(100-this.value)">
+    <div style="font-size:10px;color:var(--silver);margin-top:2px">Drag to adjust the Station Wagon vs Quartermaster split</div>
+   </div>
+   <div class="setting" style="grid-column:1/-1;background:#f0f8ec;border:2px solid #c5dfc0">
+    <div style="font-size:10px;color:var(--iron)">
+     <strong style="color:var(--onyx)">Volume weights</strong> use the MS / Turn Rate / SoN sliders from the Allocation tab.
+     <strong style="color:var(--onyx)">Spec recommendations</strong> use Pipeline Complementarity, Sell-Through Fit, and Days-to-Sale data to pick configs that complement each dealer's existing inventory.
+    </div>
+   </div>
+   <div class="setting" style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;grid-column:1/-1">
+    <button class="btn btn-primary" onclick="runPrimaryRecommendation()">Generate Recommendations</button>
+    <button class="btn btn-secondary" id="btnPrExport" onclick="exportPrimaryExcel()" disabled>Export to Excel</button>
+    <span id="prStatus" style="font-size:11px;color:var(--silver)"></span>
+   </div>
+  </div>
+ </div>
+
+ <div id="prResultsContainer"></div>
+
+ <div id="prEmailSection" style="display:none">
+  <div class="card" style="margin-top:16px">
+   <div class="card-t">Primary Recommendation Emails</div>
+   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px">
+    <div>
+     <label style="font-size:10px;font-weight:600;color:var(--iron);text-transform:uppercase;display:block;margin-bottom:4px">Sender Name</label>
+     <input type="text" id="prEmailSender" value="[RBM Name]" style="width:100%;padding:6px 10px;border:1px solid var(--dove);border-radius:4px;font-size:12px">
+    </div>
+    <div>
+     <label style="font-size:10px;font-weight:600;color:var(--iron);text-transform:uppercase;display:block;margin-bottom:4px">Custom Message (optional)</label>
+     <input type="text" id="prEmailCustomMsg" value="" placeholder="e.g. Please confirm your preferred specs within 5 business days..." style="width:100%;padding:6px 10px;border:1px solid var(--dove);border-radius:4px;font-size:12px">
+    </div>
+   </div>
+   <div>
+    <button class="btn btn-primary" onclick="renderPrimaryEmails()">Generate Emails</button>
+    <button class="btn btn-outline" onclick="copyAllPrimaryEmails()" style="margin-left:6px">Copy All to Clipboard</button>
+    <button class="btn btn-secondary" onclick="exportPrimaryEmailHTML()" style="margin-left:6px">Export Email HTML File</button>
+   </div>
+  </div>
+  <div id="prEmailContainer"></div>
+ </div>
+
 </div>
 
 </div><!-- /wrap -->
@@ -2684,6 +2762,589 @@ function buildInternalSummarySheet(wb, results) {
     formatCells: false, formatColumns: false, formatRows: false, sort: false, autoFilter: false };
 
   XLSX.utils.book_append_sheet(wb, ws3, "Internal Summary");
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════
+// PRIMARY RECOMMENDATION ENGINE
+// ═══════════════════════════════════════════════════════════════════════
+
+let primaryResults = [];
+
+// Toggle SW:QM ratio slider visibility based on model radio
+document.querySelectorAll('input[name="prModel"]').forEach(r => {
+  r.addEventListener('change', () => {
+    document.getElementById('prSplitSetting').style.display = r.value === 'BOTH' && r.checked ? '' : '';
+    // Always show it — only meaningful when BOTH is selected, but harmless otherwise
+  });
+});
+
+// --- Config Universe: extract real production configs from V_DATA ---
+function buildConfigUniverse() {
+  const configs = {};
+  V_DATA.forEach(row => {
+    const v = decodeVehicle(row);
+    // Skip sold vehicles — we want configs that are still being produced
+    if (!v.body || !v.trim || !v.color) return;
+    const key = v.body + "|" + v.trim + "|" + v.color;
+    if (!configs[key]) {
+      configs[key] = { body: v.body, trim: v.trim, color: v.color, specCombos: {} };
+    }
+    // Track sub-spec combinations (everything below body|trim|color)
+    const subKey = [v.seats, v.roof, v.safari, v.wheels, v.tyres,
+      v.frame, v.tow, v.heated_seats, v.diff_locks, v.ladder,
+      v.sound, v.privacy_glass, v.air_intake, v.winch,
+      v.aux_battery, v.carpet, v.compass, v.centre_diff,
+      v.floor_trim, v.utility_rails, v.spare_wheel, v.front_tow,
+      v.bump_strips, v.steering, v.wheel_locks].join("|");
+    if (!configs[key].specCombos[subKey]) {
+      configs[key].specCombos[subKey] = { count: 0, specs: {
+        seats: v.seats, roof: v.roof, safari: v.safari,
+        wheels: v.wheels, tyres: v.tyres, frame: v.frame,
+        tow: v.tow, heated_seats: v.heated_seats,
+        diff_locks: v.diff_locks, ladder: v.ladder,
+        sound: v.sound, privacy_glass: v.privacy_glass,
+        air_intake: v.air_intake, winch: v.winch,
+        aux_battery: v.aux_battery, carpet: v.carpet,
+        compass: v.compass, centre_diff: v.centre_diff,
+        floor_trim: v.floor_trim, utility_rails: v.utility_rails,
+        spare_wheel: v.spare_wheel, front_tow: v.front_tow,
+        bump_strips: v.bump_strips, steering: v.steering,
+        wheel_locks: v.wheel_locks, pack: v.pack
+      }};
+    }
+    configs[key].specCombos[subKey].count++;
+  });
+  return configs;
+}
+
+// --- Volume Distribution: score dealers and distribute units ---
+function computeVolumeDistribution(totalUnits) {
+  // Read demand weights from the Allocation tab sliders
+  const wMS = parseInt(document.getElementById("sMS").value) || 40;
+  const wTR = parseInt(document.getElementById("sTR").value) || 30;
+  const wSN = parseInt(document.getElementById("sSN").value) || 30;
+  const wTotal = (wMS + wTR + wSN) || 1;
+  const nMS = wMS / wTotal;
+  const nTR = wTR / wTotal;
+  const nSN = wSN / wTotal;
+  const targetMS = parseInt(document.getElementById("sTargetMS").value) || 60;
+  const maxPerDealer = parseInt(document.getElementById("sMaxPerDealer").value) || 0;
+
+  const eligible = DEALERS.filter(d => !excludedDealers.has(d.name));
+  if (eligible.length === 0) return [];
+
+  const maxTR = Math.max(...eligible.map(d => blendedAvg(d)), 0.01);
+  const maxSoN = Math.max(...eligible.map(d => blendedSoN(d)), 0.01);
+
+  const scored = eligible.map(d => {
+    const bAvg = blendedAvg(d);
+    const bSoN = blendedSoN(d);
+    const currentMS = bAvg > 0 ? (d.og / bAvg * 30) : 999;
+
+    // F1: Month Supply need (same formula as scoreDealerForVehicle)
+    let f_ms;
+    if (currentMS <= targetMS) {
+      f_ms = 0.5 + 0.5 * Math.max(0, targetMS - currentMS) / targetMS;
+    } else {
+      f_ms = Math.max(0, 0.5 * (1 - (currentMS - targetMS) / targetMS));
+    }
+    // F2: Turn Rate normalized
+    const f_tr = bAvg / maxTR;
+    // F3: Share of Nation normalized
+    const f_sn = bSoN / maxSoN;
+
+    const score = nMS * f_ms + nTR * f_tr + nSN * f_sn;
+    return { dealer: d, score, f_ms, f_tr, f_sn, bAvg, bSoN, currentMS };
+  }).filter(d => d.score > 0.001);
+
+  // Hamilton / largest-remainder rounding
+  const totalScore = scored.reduce((s, d) => s + d.score, 0) || 1;
+  scored.forEach(d => {
+    d.rawShare = (d.score / totalScore) * totalUnits;
+    d.units = Math.floor(d.rawShare);
+  });
+  // Cap per-dealer if set
+  if (maxPerDealer > 0) {
+    scored.forEach(d => { d.units = Math.min(d.units, maxPerDealer); });
+  }
+  let distributed = scored.reduce((s, d) => s + d.units, 0);
+  let remaining = totalUnits - distributed;
+  // Distribute remainders by largest fractional part
+  const byRemainder = [...scored].sort((a, b) => (b.rawShare - b.units) - (a.rawShare - a.units));
+  for (let i = 0; i < remaining && i < byRemainder.length; i++) {
+    if (maxPerDealer > 0 && byRemainder[i].units >= maxPerDealer) continue;
+    byRemainder[i].units++;
+  }
+  return scored.filter(d => d.units > 0).sort((a, b) => b.units - a.units);
+}
+
+// --- Model Split ---
+function splitByModel(dealerResults, swPct) {
+  dealerResults.forEach(d => {
+    if (swPct >= 100) { d.swUnits = d.units; d.qmUnits = 0; return; }
+    if (swPct <= 0) { d.swUnits = 0; d.qmUnits = d.units; return; }
+    d.swUnits = Math.round(d.units * swPct / 100);
+    d.qmUnits = d.units - d.swUnits;
+  });
+}
+
+// --- Spec Scoring: score a config for a dealer ---
+function scoreConfigForDealer(dealerName, config, dealerPipeline, batchSoFar) {
+  const bt = config.body + "|" + config.trim;
+  const btc = bt + "|" + config.color;
+
+  // F1: Sell-Through Fit (30%)
+  const stData = (SELL_THROUGH[dealerName] || {})[bt];
+  let f_st = 0.5;
+  if (stData && stData.d >= 3 && stData.nr > 0) {
+    const ratio = stData.r / stData.nr;
+    f_st = Math.max(0, Math.min(1, 0.5 + (ratio - 1) * 0.7));
+  } else if (stData && stData.d >= 3) {
+    f_st = stData.r > 0.5 ? 0.65 : 0.35;
+  }
+
+  // F2: Pipeline Complementarity (40%)
+  const pBT = dealerPipeline[bt] || 0;
+  const pBTC = dealerPipeline[btc] || 0;
+  const totalPipeline = Object.values(dealerPipeline).reduce((s, v) => s + v, 0) / 2 + batchSoFar.length;
+  const concBT = totalPipeline > 0 ? pBT / totalPipeline : 0;
+  const concBTC = totalPipeline > 0 ? pBTC / totalPipeline : 0;
+  const pipeScore = Math.max(0, 1 - (concBT * 0.6 + concBTC * 0.4) * 3);
+
+  let batchScore = 1;
+  if (batchSoFar.length > 0) {
+    const bBTC = batchSoFar.filter(c => c.body === config.body && c.trim === config.trim && c.color === config.color).length;
+    const bBT = batchSoFar.filter(c => c.body === config.body && c.trim === config.trim).length;
+    const bColor = batchSoFar.filter(c => c.color === config.color).length;
+    const bTrim = batchSoFar.filter(c => c.trim === config.trim).length;
+
+    const repeatBTC = 1 / (1 + bBTC * 2);
+    const repeatBT = 1 / (1 + bBT * 0.7);
+    const colorPenalty = batchSoFar.length < 6
+      ? (bColor > 0 ? 1 / (1 + bColor * 1.5) : 1)
+      : Math.max(0, 1 - (bColor / batchSoFar.length) * 2.5);
+    const trimConc = bTrim / batchSoFar.length;
+    const trimVar = Math.max(0, 1 - Math.max(0, trimConc - 0.35) * 4);
+
+    batchScore = repeatBTC * 0.2 + repeatBT * 0.15 + colorPenalty * 0.35 + trimVar * 0.2 + 0.1;
+  }
+  const f_pc = pipeScore * 0.35 + batchScore * 0.65;
+
+  // F3: Days-to-Sale Speed (30%)
+  const dtsDealer = (DAYS_TO_SELL[dealerName] || {})[bt];
+  const dtsNetwork = (DAYS_TO_SELL["_network"] || {})[bt];
+  let f_ds = 0.5;
+  if (dtsDealer && dtsDealer.c >= 3 && dtsNetwork && dtsNetwork.a > 0) {
+    const ratio = dtsDealer.a / dtsNetwork.a;
+    f_ds = Math.max(0, Math.min(1, 0.5 + (1 - ratio) * 0.7));
+  }
+
+  return 0.30 * f_st + 0.40 * f_pc + 0.30 * f_ds;
+}
+
+// --- Greedy Spec Engine ---
+function recommendSpecsForDealer(dealerName, unitCount, model, configUniverse) {
+  const dealerPipeline = { ...(PIPELINE_COMP[dealerName] || {}) };
+  const batchSoFar = [];
+  const recs = [];
+
+  const eligible = Object.values(configUniverse).filter(c => {
+    if (model === "SW") return c.body === "SW";
+    if (model === "QM") return c.body === "QM";
+    return true;
+  });
+  if (eligible.length === 0) return recs;
+
+  for (let i = 0; i < unitCount; i++) {
+    let bestConfig = null, bestScore = -Infinity, bestSpecs = null;
+    eligible.forEach(config => {
+      const score = scoreConfigForDealer(dealerName, config, dealerPipeline, batchSoFar);
+      if (score > bestScore) {
+        bestScore = score;
+        bestConfig = config;
+        const combos = Object.values(config.specCombos);
+        bestSpecs = combos.sort((a, b) => b.count - a.count)[0].specs;
+      }
+    });
+    if (bestConfig) {
+      const rec = {
+        unit: i + 1, body: bestConfig.body, trim: bestConfig.trim,
+        color: bestConfig.color, ...bestSpecs, score: bestScore
+      };
+      recs.push(rec);
+      batchSoFar.push(rec);
+      const bt = bestConfig.body + "|" + bestConfig.trim;
+      const btc = bt + "|" + bestConfig.color;
+      dealerPipeline[bt] = (dealerPipeline[bt] || 0) + 1;
+      dealerPipeline[btc] = (dealerPipeline[btc] || 0) + 1;
+    }
+  }
+  return recs;
+}
+
+// --- Main Orchestration ---
+function runPrimaryRecommendation() {
+  const totalUnits = parseInt(document.getElementById("prTotalUnits").value) || 100;
+  const modelMode = (document.querySelector('input[name="prModel"]:checked') || {}).value || "BOTH";
+  const swPct = modelMode === "BOTH"
+    ? parseInt(document.getElementById("prSWRatio").value) || 70
+    : (modelMode === "SW" ? 100 : 0);
+
+  document.getElementById("prStatus").textContent = "Generating recommendations...";
+
+  setTimeout(() => {
+    const configUniverse = buildConfigUniverse();
+    const dealerResults = computeVolumeDistribution(totalUnits);
+    splitByModel(dealerResults, swPct);
+
+    // Generate spec recommendations per dealer
+    dealerResults.forEach(d => {
+      d.swRecs = d.swUnits > 0 ? recommendSpecsForDealer(d.dealer.name, d.swUnits, "SW", configUniverse) : [];
+      d.qmRecs = d.qmUnits > 0 ? recommendSpecsForDealer(d.dealer.name, d.qmUnits, "QM", configUniverse) : [];
+      d.allRecs = [...d.swRecs, ...d.qmRecs];
+      d.market = d.dealer.market;
+    });
+
+    primaryResults = dealerResults;
+
+    // KPIs
+    const totalSW = dealerResults.reduce((s, d) => s + d.swUnits, 0);
+    const totalQM = dealerResults.reduce((s, d) => s + d.qmUnits, 0);
+    const avgScore = dealerResults.length > 0 ? dealerResults.reduce((s, d) => s + d.score, 0) / dealerResults.length : 0;
+    document.getElementById("kPrUnits").textContent = totalSW + totalQM;
+    document.getElementById("kPrDealers").textContent = dealerResults.length;
+    document.getElementById("kPrSplit").textContent = totalSW + " SW / " + totalQM + " QM";
+    document.getElementById("kPrScore").textContent = avgScore.toFixed(3);
+
+    renderPrimaryResults(dealerResults);
+    document.getElementById("prEmailSection").style.display = "";
+    document.getElementById("btnPrExport").disabled = false;
+    document.getElementById("prStatus").textContent = "Done — " + dealerResults.length + " dealers, " + (totalSW + totalQM) + " units.";
+  }, 10);
+}
+
+// --- Results Rendering ---
+function renderPrimaryResults(results) {
+  if (results.length === 0) {
+    document.getElementById("prResultsContainer").innerHTML = '<div class="card"><p style="color:var(--silver)">No eligible dealers found. Check exclusions and scoring weights.</p></div>';
+    return;
+  }
+  // Group by market
+  const mktOrder = ["Central","Northeast","Southeast","Western","Canada","Mexico"];
+  const mktCls = {Central:"grp-ctr",Northeast:"grp-ne",Southeast:"grp-se",Western:"grp-w",Canada:"grp-ne",Mexico:"grp-w"};
+  const byMkt = {};
+  results.forEach(d => {
+    const m = d.market || "Other";
+    if (!byMkt[m]) byMkt[m] = [];
+    byMkt[m].push(d);
+  });
+  const mktKeys = [...mktOrder.filter(m => byMkt[m]), ...Object.keys(byMkt).filter(m => !mktOrder.includes(m))];
+
+  let html = '<div class="card"><div class="card-t">Volume Distribution & Recommended Specs</div>';
+  html += '<div class="tscroll"><table>';
+  html += '<thead><tr><th>Market</th><th>Dealer</th><th class="r">Current OG</th><th class="r">Current MS</th>';
+  html += '<th class="r">Turn Rate</th><th class="r">SoN %</th><th class="r">Earned</th>';
+  html += '<th class="r">SW</th><th class="r">QM</th><th class="r">Score</th></tr></thead><tbody>';
+
+  let globalIdx = 0;
+  mktKeys.forEach(mkt => {
+    const dealers = byMkt[mkt].sort((a, b) => b.units - a.units);
+    const cls = mktCls[mkt] || "grp-w";
+    const mktTotal = dealers.reduce((s, d) => s + d.units, 0);
+    const mktSW = dealers.reduce((s, d) => s + d.swUnits, 0);
+    const mktQM = dealers.reduce((s, d) => s + d.qmUnits, 0);
+    html += '<tr class="grp ' + cls + '"><td colspan="6">' + mkt + '</td><td class="r">' + mktTotal + '</td><td class="r">' + mktSW + '</td><td class="r">' + mktQM + '</td><td></td></tr>';
+
+    dealers.forEach((d, di) => {
+      const ms = d.bAvg > 0 ? Math.round(d.dealer.og / d.bAvg * 30) : 0;
+      const rowId = 'prDetail' + globalIdx;
+      const z = di % 2 === 0 ? '' : ' class="z"';
+      html += '<tr' + z + ' class="audit-row" onclick="document.getElementById(\'' + rowId + '\').style.display=document.getElementById(\'' + rowId + '\').style.display===\'none\'?\'table-row\':\'none\'">';
+      html += '<td></td>';
+      html += '<td style="font-weight:600">' + d.dealer.name + '</td>';
+      html += '<td class="r">' + d.dealer.og + '</td>';
+      html += '<td class="r">' + ms + 'd</td>';
+      html += '<td class="r">' + d.bAvg.toFixed(1) + '</td>';
+      html += '<td class="r">' + d.bSoN.toFixed(1) + '%</td>';
+      html += '<td class="r" style="font-weight:700;color:var(--flare)">' + d.units + '</td>';
+      html += '<td class="r">' + d.swUnits + '</td>';
+      html += '<td class="r">' + d.qmUnits + '</td>';
+      html += '<td class="r">' + d.score.toFixed(3) + '</td>';
+      html += '</tr>';
+
+      // Expandable spec detail row
+      html += '<tr id="' + rowId + '" style="display:none" class="audit-detail"><td colspan="10">';
+      html += '<div style="padding:8px 4px">';
+      html += '<div style="font-size:10px;font-weight:700;color:var(--iron);text-transform:uppercase;margin-bottom:6px">Recommended Specs for ' + d.dealer.name + '</div>';
+      html += '<table style="font-size:10px"><thead><tr style="background:#f7f6f4">';
+      html += '<th style="background:#f7f6f4;color:var(--iron);position:static">#</th>';
+      html += '<th style="background:#f7f6f4;color:var(--iron);position:static">Body</th>';
+      html += '<th style="background:#f7f6f4;color:var(--iron);position:static">Trim</th>';
+      html += '<th style="background:#f7f6f4;color:var(--iron);position:static">Pack</th>';
+      html += '<th style="background:#f7f6f4;color:var(--iron);position:static">Ext Color</th>';
+      html += '<th style="background:#f7f6f4;color:var(--iron);position:static">Interior</th>';
+      html += '<th style="background:#f7f6f4;color:var(--iron);position:static">Roof</th>';
+      html += '<th style="background:#f7f6f4;color:var(--iron);position:static">Frame</th>';
+      html += '<th style="background:#f7f6f4;color:var(--iron);position:static">Wheels</th>';
+      html += '<th style="background:#f7f6f4;color:var(--iron);position:static">Tyres</th>';
+      html += '<th style="background:#f7f6f4;color:var(--iron);position:static">Safari</th>';
+      html += '<th style="background:#f7f6f4;color:var(--iron);position:static">Tow</th>';
+      html += '<th style="background:#f7f6f4;color:var(--iron);position:static">Heated Seats</th>';
+      html += '<th style="background:#f7f6f4;color:var(--iron);position:static">Diff Locks</th>';
+      html += '<th style="background:#f7f6f4;color:var(--iron);position:static">Ladder</th>';
+      html += '</tr></thead><tbody>';
+      d.allRecs.forEach((r, ri) => {
+        const bg = ri % 2 === 0 ? '#fff' : '#fafaf9';
+        html += '<tr style="background:' + bg + '">';
+        html += '<td style="font-weight:600;color:var(--flare)">' + r.unit + '</td>';
+        html += '<td>' + r.body + '</td>';
+        html += '<td>' + r.trim + '</td>';
+        html += '<td>' + (r.pack || '') + '</td>';
+        html += '<td>' + r.color + '</td>';
+        html += '<td>' + (r.seats || '') + '</td>';
+        html += '<td>' + (r.roof || '') + '</td>';
+        html += '<td>' + (r.frame || '') + '</td>';
+        html += '<td>' + (r.wheels || '') + '</td>';
+        html += '<td>' + (r.tyres || '') + '</td>';
+        html += '<td>' + (r.safari || '') + '</td>';
+        html += '<td>' + (r.tow || '') + '</td>';
+        html += '<td>' + (r.heated_seats || '') + '</td>';
+        html += '<td>' + (r.diff_locks || '') + '</td>';
+        html += '<td>' + (r.ladder || '') + '</td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table></div></td></tr>';
+      globalIdx++;
+    });
+  });
+
+  // Network total row
+  const totalU = results.reduce((s, d) => s + d.units, 0);
+  const totalSW = results.reduce((s, d) => s + d.swUnits, 0);
+  const totalQM = results.reduce((s, d) => s + d.qmUnits, 0);
+  html += '<tr class="tot"><td colspan="6">NETWORK TOTAL</td><td class="r">' + totalU + '</td><td class="r">' + totalSW + '</td><td class="r">' + totalQM + '</td><td></td></tr>';
+  html += '</tbody></table></div></div>';
+
+  document.getElementById("prResultsContainer").innerHTML = html;
+}
+
+// --- Primary Email Generation ---
+function renderPrimaryEmails() {
+  if (primaryResults.length === 0) { alert("Generate recommendations first."); return; }
+  const sender = document.getElementById("prEmailSender").value || "[RBM Name]";
+  const customMsg = document.getElementById("prEmailCustomMsg").value || "";
+  const today = new Date();
+  const monthYear = today.toLocaleString("en-US", {month:"long"}) + " " + today.getFullYear();
+
+  let html = "";
+  primaryResults.forEach((d, di) => {
+    const vehs = d.allRecs;
+    if (vehs.length === 0) return;
+    const swCount = d.swUnits;
+    const qmCount = d.qmUnits;
+    const bodyParts = [];
+    if (swCount > 0) bodyParts.push(swCount + " Station Wagon");
+    if (qmCount > 0) bodyParts.push(qmCount + " Quartermaster");
+
+    html += '<div class="email-card" id="prEmailCard' + di + '">';
+    html += '<div class="email-header"><span class="dealer-name">' + d.dealer.name + '</span>';
+    html += '<span class="unit-count">' + vehs.length + ' unit' + (vehs.length !== 1 ? 's' : '') + ' | ' + (d.market || '') + '</span></div>';
+
+    // Metrics explanation
+    const ms = d.bAvg > 0 ? Math.round(d.dealer.og / d.bAvg * 30) : 0;
+    const fKeys = ['ms','tr','sn'];
+    const fLabels = {ms:'Balanced Month Supply', tr:'Turn Rate', sn:'Share of Nation'};
+    const fVals = {ms: d.f_ms, tr: d.f_tr, sn: d.f_sn};
+    const ranked = fKeys.map(k => ({k, v: fVals[k]})).sort((a,b) => b.v - a.v);
+    const topFactors = ranked.filter(f => f.v > 0.05).map(f => fLabels[f.k]);
+
+    let metricsHtml = '<div style="background:#f7f6f4;border:1px solid #e9e8e5;border-radius:6px;padding:10px 12px;margin:10px 0;font-size:11px;color:#444">';
+    metricsHtml += '<strong style="font-size:11px;color:#1D1D1D">How Your Allocation Was Determined</strong><br>';
+    metricsHtml += 'Volume recommendations are calculated using a balanced scoring model that evaluates each retailer across multiple performance dimensions. ';
+    metricsHtml += 'Your store\'s current metrics: ';
+    metricsHtml += '<strong>' + ms + '-day supply</strong>, ';
+    metricsHtml += '<strong>' + d.bAvg.toFixed(1) + ' avg monthly sales rate</strong>, ';
+    metricsHtml += 'and <strong>' + d.bSoN.toFixed(1) + '% share of nation sales</strong>. ';
+    if (topFactors.length > 0) {
+      metricsHtml += 'Your allocation was primarily driven by your ';
+      metricsHtml += topFactors.join(', ').replace(/,([^,]*)$/, ' and$1') + '. ';
+    }
+    metricsHtml += 'Recommended specs are selected to complement your existing pipeline based on historical sell-through performance and inventory variety.';
+    metricsHtml += '</div>';
+
+    html += '<div class="email-body" id="prEmailBody' + di + '">';
+    html += '<p>Hi ' + d.dealer.name + ',</p>';
+    html += '<p>Based on your sales performance, you\'ve earned <strong>' + vehs.length + ' unit' + (vehs.length !== 1 ? 's' : '') +
+      '</strong> (' + bodyParts.join(", ") + ') for our <strong>' + monthYear + ' Primary Production Recommendation</strong>.' +
+      ' These are recommended specifications for upcoming production allocation.</p>';
+    html += metricsHtml;
+    html += '<p>Please review the recommended specifications below and confirm your preferences.</p>';
+
+    // Spec table
+    html += '<table style="width:100%;border-collapse:collapse;font-size:11px;margin:12px 0">';
+    html += '<thead><tr style="background:var(--charcoal);color:#fff">';
+    html += '<th style="padding:5px 6px;text-align:left;font-size:9px">#</th>';
+    html += '<th style="padding:5px 6px;text-align:left;font-size:9px">Body</th>';
+    html += '<th style="padding:5px 6px;text-align:left;font-size:9px">Trim</th>';
+    html += '<th style="padding:5px 6px;text-align:left;font-size:9px">Ext Color</th>';
+    html += '<th style="padding:5px 6px;text-align:left;font-size:9px">Interior</th>';
+    html += '<th style="padding:5px 6px;text-align:left;font-size:9px">Roof</th>';
+    html += '<th style="padding:5px 6px;text-align:left;font-size:9px">Frame</th>';
+    html += '<th style="padding:5px 6px;text-align:left;font-size:9px">Wheels</th>';
+    html += '<th style="padding:5px 6px;text-align:left;font-size:9px">Tyres</th>';
+    html += '<th style="padding:5px 6px;text-align:left;font-size:9px">Safari</th>';
+    html += '<th style="padding:5px 6px;text-align:left;font-size:9px">Tow</th>';
+    html += '<th style="padding:5px 6px;text-align:center;font-size:9px">Accept</th>';
+    html += '<th style="padding:5px 6px;text-align:center;font-size:9px">Reject</th>';
+    html += '</tr></thead><tbody>';
+
+    vehs.forEach((r, vi) => {
+      const z = vi % 2 === 0 ? "#fff" : "#fafaf9";
+      html += '<tr style="background:' + z + '">';
+      html += '<td style="padding:4px 6px;font-weight:600;color:var(--flare);border-bottom:1px solid #eee">' + r.unit + '</td>';
+      html += '<td style="padding:4px 6px;border-bottom:1px solid #eee">' + r.body + '</td>';
+      html += '<td style="padding:4px 6px;border-bottom:1px solid #eee">' + r.trim + '</td>';
+      html += '<td style="padding:4px 6px;border-bottom:1px solid #eee">' + r.color + '</td>';
+      html += '<td style="padding:4px 6px;border-bottom:1px solid #eee">' + (r.seats || '') + '</td>';
+      html += '<td style="padding:4px 6px;border-bottom:1px solid #eee">' + (r.roof || '') + '</td>';
+      html += '<td style="padding:4px 6px;border-bottom:1px solid #eee">' + (r.frame || '') + '</td>';
+      html += '<td style="padding:4px 6px;border-bottom:1px solid #eee">' + (r.wheels || '') + '</td>';
+      html += '<td style="padding:4px 6px;border-bottom:1px solid #eee">' + (r.tyres || '') + '</td>';
+      html += '<td style="padding:4px 6px;border-bottom:1px solid #eee">' + (r.safari || '') + '</td>';
+      html += '<td style="padding:4px 6px;border-bottom:1px solid #eee">' + (r.tow || '') + '</td>';
+      html += '<td style="padding:4px 6px;text-align:center;border-bottom:1px solid #eee;background:#f8fff5">&#9744;</td>';
+      html += '<td style="padding:4px 6px;text-align:center;border-bottom:1px solid #eee;background:#fff5f5">&#9744;</td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+
+    if (customMsg) {
+      html += '<p style="color:var(--iron);font-style:italic">' + customMsg.replace(/\n/g, '<br>') + '</p>';
+    }
+    html += '<p>Let me know if you have any questions or would like to adjust the recommended specifications.</p>';
+    html += '<p>Best regards,<br><strong>' + sender + '</strong></p>';
+    html += '</div>';
+
+    html += '<div class="email-actions">';
+    html += '<button class="btn btn-outline" style="padding:4px 12px;font-size:10px" onclick="copyPrimarySingleEmail(' + di + ')">Copy This Email</button>';
+    html += '<span class="copy-msg" id="prCopyMsg' + di + '">Copied!</span>';
+    html += '</div>';
+    html += '</div>';
+  });
+
+  document.getElementById("prEmailContainer").innerHTML = html;
+}
+
+function copyPrimarySingleEmail(idx) {
+  const el = document.getElementById("prEmailBody" + idx);
+  if (!el) return;
+  const htmlContent = el.innerHTML;
+  const textContent = el.innerText;
+  if (navigator.clipboard && navigator.clipboard.write) {
+    navigator.clipboard.write([new ClipboardItem({
+      "text/html": new Blob([htmlContent], {type: "text/html"}),
+      "text/plain": new Blob([textContent], {type: "text/plain"})
+    })]).then(() => {
+      const msg = document.getElementById("prCopyMsg" + idx);
+      if (msg) { msg.classList.add("show"); setTimeout(() => msg.classList.remove("show"), 2000); }
+    });
+  } else {
+    // Fallback: select and copy
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    document.execCommand("copy");
+    sel.removeAllRanges();
+    const msg = document.getElementById("prCopyMsg" + idx);
+    if (msg) { msg.classList.add("show"); setTimeout(() => msg.classList.remove("show"), 2000); }
+  }
+}
+
+function copyAllPrimaryEmails() {
+  let htmlAll = "";
+  let textAll = "";
+  primaryResults.forEach((d, di) => {
+    const el = document.getElementById("prEmailBody" + di);
+    if (el) {
+      htmlAll += el.innerHTML + "<br><hr style='border:1px solid #ddd;margin:20px 0'><br>";
+      textAll += el.innerText + "\n\n---\n\n";
+    }
+  });
+  if (navigator.clipboard && navigator.clipboard.write) {
+    navigator.clipboard.write([new ClipboardItem({
+      "text/html": new Blob([htmlAll], {type: "text/html"}),
+      "text/plain": new Blob([textAll], {type: "text/plain"})
+    })]);
+  }
+}
+
+function exportPrimaryEmailHTML() {
+  if (primaryResults.length === 0) return;
+  let emailHtml = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Primary Recommendation Emails</title>';
+  emailHtml += '<style>body{font-family:Arial,Helvetica,sans-serif;background:#f5f5f5;padding:20px;color:#1D1D1D}';
+  emailHtml += '.email-wrap{max-width:800px;margin:0 auto 30px;background:#fff;border:1px solid #ddd;border-radius:8px;overflow:hidden}';
+  emailHtml += '.email-hdr{background:#1D1D1D;color:#fff;padding:12px 20px;display:flex;justify-content:space-between}';
+  emailHtml += '.email-hdr .name{font-weight:700;font-size:14px} .email-hdr .ct{font-size:12px;color:#999}';
+  emailHtml += '.email-bdy{padding:20px;font-size:13px;line-height:1.7}</style></head><body>';
+
+  primaryResults.forEach((d, di) => {
+    const el = document.getElementById("prEmailBody" + di);
+    if (!el) return;
+    emailHtml += '<div class="email-wrap">';
+    emailHtml += '<div class="email-hdr"><span class="name">' + d.dealer.name + '</span>';
+    emailHtml += '<span class="ct">' + d.allRecs.length + ' units | ' + (d.market || '') + '</span></div>';
+    emailHtml += '<div class="email-bdy">' + el.innerHTML + '</div></div>';
+  });
+
+  emailHtml += '</body></html>';
+  const blob = new Blob([emailHtml], {type: 'text/html'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'Primary_Recommendation_Emails_' + new Date().toISOString().slice(0, 10) + '.html';
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 100);
+}
+
+// --- Excel Export for Primary Recommendations ---
+function exportPrimaryExcel() {
+  if (primaryResults.length === 0) return;
+  const wb = XLSX.utils.book_new();
+
+  // Sheet 1: All recommendations
+  const specHeaders = ["Dealer","Market","Unit #","Body","Trim","Pack","Ext Color","Interior/Seats",
+    "Roof","Frame","Wheels","Tyres","Safari Windows","Tow Bar","Heated Seats","Diff Locks",
+    "Access Ladder","Sound","Privacy Glass","Air Intake","Winch"];
+  const rows = [specHeaders];
+  primaryResults.forEach(d => {
+    d.allRecs.forEach(r => {
+      rows.push([d.dealer.name, d.market, r.unit, r.body, r.trim, r.pack||"", r.color,
+        r.seats||"", r.roof||"", r.frame||"", r.wheels||"", r.tyres||"",
+        r.safari||"", r.tow||"", r.heated_seats||"", r.diff_locks||"",
+        r.ladder||"", r.sound||"", r.privacy_glass||"", r.air_intake||"", r.winch||""]);
+    });
+  });
+  const ws1 = XLSX.utils.aoa_to_sheet(rows);
+  ws1['!cols'] = specHeaders.map(() => ({wch: 16}));
+  ws1['!cols'][0] = {wch: 26};
+  XLSX.utils.book_append_sheet(wb, ws1, "Recommended Specs");
+
+  // Sheet 2: Dealer summary
+  const sumHeaders = ["Market","Dealer","Current OG","Current MS (days)","Turn Rate","SoN %","Earned Units","SW","QM","Score"];
+  const sumRows = [sumHeaders];
+  primaryResults.forEach(d => {
+    const ms = d.bAvg > 0 ? Math.round(d.dealer.og / d.bAvg * 30) : 0;
+    sumRows.push([d.market, d.dealer.name, d.dealer.og, ms, +d.bAvg.toFixed(1), +d.bSoN.toFixed(1), d.units, d.swUnits, d.qmUnits, +d.score.toFixed(3)]);
+  });
+  const ws2 = XLSX.utils.aoa_to_sheet(sumRows);
+  ws2['!cols'] = sumHeaders.map(() => ({wch: 14}));
+  ws2['!cols'][1] = {wch: 26};
+  XLSX.utils.book_append_sheet(wb, ws2, "Dealer Summary");
+
+  XLSX.writeFile(wb, "Primary_Recommendation_" + new Date().toISOString().slice(0,10) + ".xlsx");
 }
 
 </script>
