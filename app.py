@@ -42,13 +42,19 @@ def _do_refresh():
 
 @app.get("/", response_class=HTMLResponse)
 async def allocation():
+    # Prefer the Master-File-generated output if it exists (data is baked in).
     if os.path.exists(OUTPUT_PATH):
         with open(OUTPUT_PATH, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    # Otherwise serve the raw template — its JS will auto-fetch from the Hub
+    # API on load so no Master File is needed.
+    if os.path.exists(TEMPLATE_PATH):
+        with open(TEMPLATE_PATH, "r", encoding="utf-8") as f:
             return HTMLResponse(content=f.read())
     return HTMLResponse(
         content="""
         <html><head><meta http-equiv="refresh" content="0;url=/upload"></head>
-        <body>No allocation data yet. Redirecting to upload...</body></html>
+        <body>No allocation template found. Redirecting to upload...</body></html>
         """
     )
 
