@@ -572,11 +572,17 @@ tr.tot td{background:var(--onyx)!important;color:#fff;font-weight:700;border-bot
     </div>
    </div>
    <div class="setting">
-    <label>Model Years (check all that apply)</label>
-    <div id="prMYCheckboxes" style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap">
-     <span style="font-size:11px;color:var(--silver)">Loading model years...</span>
+    <label>Model Years</label>
+    <div id="prMYCheckboxes" style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
+     <span style="font-size:11px;color:var(--silver)">Loading...</span>
     </div>
-    <div style="font-size:10px;color:var(--silver);margin-top:4px">Only checked model years will be included in recommendations</div>
+   </div>
+   <div class="setting">
+    <label>Trim Levels</label>
+    <div id="prTrimCheckboxes" style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
+     <span style="font-size:11px;color:var(--silver)">Loading...</span>
+    </div>
+    <div style="font-size:10px;color:var(--silver);margin-top:4px">Only checked trims will be recommended. Uncheck to exclude.</div>
    </div>
    <div class="setting" id="prSplitSetting">
     <label>SW : QM Ratio — <span id="prSplitLabel" style="color:var(--flare);font-size:14px">70 : 30</span></label>
@@ -683,7 +689,7 @@ async function fetchHubData() {
     // Refresh all data-dependent views
     if (typeof renderDealerTable === "function") renderDealerTable();
     if (typeof updateDealerKpis === "function") updateDealerKpis();
-    if (typeof populateMYCheckboxes === "function") populateMYCheckboxes();
+    if (typeof populatePrimaryFilters === "function") populatePrimaryFilters();
 
     // Enable the Run button if vehicles are already uploaded in the pool
     if (matchedVehicles.length > 0) {
@@ -2852,23 +2858,34 @@ document.querySelectorAll('input[name="prModel"]').forEach(r => {
 });
 
 // --- Populate MY checkboxes from loaded data ---
-function populateMYCheckboxes() {
+function populatePrimaryFilters() {
   const mys = new Set();
+  const trims = new Set();
   V_DATA.forEach(row => {
     const v = decodeVehicle(row);
     if (v.my && v.my !== "nan" && v.my !== "NaN") mys.add(v.my);
+    if (v.trim && v.trim !== "nan" && v.trim !== "NaN") trims.add(v.trim);
   });
-  const sorted = [...mys].sort();
-  const container = document.getElementById("prMYCheckboxes");
-  if (sorted.length === 0) {
-    container.innerHTML = '<span style="font-size:11px;color:var(--silver)">No model year data available</span>';
-    return;
-  }
-  container.innerHTML = sorted.map(my =>
-    '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:12px;padding:6px 12px;border:1px solid var(--dove);border-radius:6px;text-transform:none;letter-spacing:0">' +
-    '<input type="checkbox" class="prMYCb" value="' + my + '" checked style="cursor:pointer"> ' + my +
-    '</label>'
-  ).join('');
+
+  const cbStyle = 'display:flex;align-items:center;gap:4px;cursor:pointer;font-size:12px;padding:5px 11px;border:1px solid var(--dove);border-radius:6px;text-transform:none;letter-spacing:0';
+
+  // MY checkboxes
+  const myContainer = document.getElementById("prMYCheckboxes");
+  const sortedMY = [...mys].sort();
+  myContainer.innerHTML = sortedMY.length === 0
+    ? '<span style="font-size:11px;color:var(--silver)">No data</span>'
+    : sortedMY.map(my =>
+        '<label style="' + cbStyle + '"><input type="checkbox" class="prMYCb" value="' + my + '" checked style="cursor:pointer"> ' + my + '</label>'
+      ).join('');
+
+  // Trim checkboxes
+  const trimContainer = document.getElementById("prTrimCheckboxes");
+  const sortedTrim = [...trims].sort();
+  trimContainer.innerHTML = sortedTrim.length === 0
+    ? '<span style="font-size:11px;color:var(--silver)">No data</span>'
+    : sortedTrim.map(t =>
+        '<label style="' + cbStyle + '"><input type="checkbox" class="prTrimCb" value="' + t + '" checked style="cursor:pointer"> ' + t + '</label>'
+      ).join('');
 }
 
 function getSelectedMYs() {
@@ -2876,14 +2893,22 @@ function getSelectedMYs() {
   return new Set([...cbs].map(cb => cb.value));
 }
 
+function getSelectedTrims() {
+  const cbs = document.querySelectorAll('.prTrimCb:checked');
+  return new Set([...cbs].map(cb => cb.value));
+}
+
 // --- Config Universe: extract real production configs from V_DATA ---
 function buildConfigUniverse() {
   const selectedMYs = getSelectedMYs();
+  const selectedTrims = getSelectedTrims();
   const configs = {};
   V_DATA.forEach(row => {
     const v = decodeVehicle(row);
     // Filter by selected model years
     if (selectedMYs.size > 0 && !selectedMYs.has(v.my)) return;
+    // Filter by selected trims
+    if (selectedTrims.size > 0 && !selectedTrims.has(v.trim)) return;
     // Skip vehicles with missing key fields or "nan" strings
     if (!v.body || !v.trim || !v.color) return;
     if (v.trim === "nan" || v.color === "nan" || v.body === "nan") return;
@@ -3280,9 +3305,9 @@ function renderPrimaryEmails() {
     html += '<p>Hi ' + d.dealer.name + ',</p>';
     html += '<p>Based on your sales performance, you\'ve earned <strong>' + vehs.length + ' unit' + (vehs.length !== 1 ? 's' : '') +
       '</strong> (' + bodyParts.join(", ") + ') for our <strong>' + monthYear + ' Primary Production Recommendation</strong>.' +
-      ' These are recommended specifications for upcoming production allocation.</p>';
+      ' Below are the recommended specifications for your upcoming production allocation.</p>';
     html += metricsHtml;
-    html += '<p>Please review the recommended specifications below and confirm your preferences.</p>';
+    html += '<p>Please review the specifications below and <strong>place your orders in SAP</strong> accordingly. If you would like to adjust any specs before ordering, reach out to your RBM.</p>';
 
     // Spec table
     html += '<table style="width:100%;border-collapse:collapse;font-size:11px;margin:12px 0">';
@@ -3325,7 +3350,7 @@ function renderPrimaryEmails() {
     if (customMsg) {
       html += '<p style="color:var(--iron);font-style:italic">' + customMsg.replace(/\n/g, '<br>') + '</p>';
     }
-    html += '<p>Let me know if you have any questions or would like to adjust the recommended specifications.</p>';
+    html += '<p>Please place your orders in SAP by the deadline communicated by your RBM. Let me know if you have any questions.</p>';
     html += '<p>Best regards,<br><strong>' + sender + '</strong></p>';
     html += '</div>';
 
