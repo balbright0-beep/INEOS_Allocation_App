@@ -3323,8 +3323,6 @@ function renderPrimaryEmails() {
     html += '<th style="padding:5px 6px;text-align:left;font-size:9px">Tyres</th>';
     html += '<th style="padding:5px 6px;text-align:left;font-size:9px">Safari</th>';
     html += '<th style="padding:5px 6px;text-align:left;font-size:9px">Tow</th>';
-    html += '<th style="padding:5px 6px;text-align:center;font-size:9px">Accept</th>';
-    html += '<th style="padding:5px 6px;text-align:center;font-size:9px">Reject</th>';
     html += '</tr></thead><tbody>';
 
     vehs.forEach((r, vi) => {
@@ -3341,8 +3339,6 @@ function renderPrimaryEmails() {
       html += '<td style="padding:4px 6px;border-bottom:1px solid #eee">' + (r.tyres || '') + '</td>';
       html += '<td style="padding:4px 6px;border-bottom:1px solid #eee">' + (r.safari || '') + '</td>';
       html += '<td style="padding:4px 6px;border-bottom:1px solid #eee">' + (r.tow || '') + '</td>';
-      html += '<td style="padding:4px 6px;text-align:center;border-bottom:1px solid #eee;background:#f8fff5">&#9744;</td>';
-      html += '<td style="padding:4px 6px;text-align:center;border-bottom:1px solid #eee;background:#fff5f5">&#9744;</td>';
       html += '</tr>';
     });
     html += '</tbody></table>';
@@ -3411,20 +3407,90 @@ function copyAllPrimaryEmails() {
 
 function exportPrimaryEmailHTML() {
   if (primaryResults.length === 0) return;
-  let emailHtml = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Primary Recommendation Emails</title>';
-  emailHtml += '<style>body{font-family:Arial,Helvetica,sans-serif;background:#f5f5f5;padding:20px;color:#1D1D1D}';
-  emailHtml += '.email-wrap{max-width:800px;margin:0 auto 30px;background:#fff;border:1px solid #ddd;border-radius:8px;overflow:hidden}';
-  emailHtml += '.email-hdr{background:#1D1D1D;color:#fff;padding:12px 20px;display:flex;justify-content:space-between}';
-  emailHtml += '.email-hdr .name{font-weight:700;font-size:14px} .email-hdr .ct{font-size:12px;color:#999}';
-  emailHtml += '.email-bdy{padding:20px;font-size:13px;line-height:1.7}</style></head><body>';
+  const sender = document.getElementById("prEmailSender").value || "[RBM Name]";
+  const today = new Date();
+  const monthYear = today.toLocaleString("en-US", {month:"long"}) + " " + today.getFullYear();
+
+  let emailHtml = '<!DOCTYPE html><html><head><meta charset="UTF-8">';
+  emailHtml += '<meta name="viewport" content="width=device-width,initial-scale=1">';
+  emailHtml += '<title>Primary Production Recommendation — ' + monthYear + '</title>';
+  emailHtml += '</head>';
+  emailHtml += '<body style="margin:0;padding:24px;background:#FAFAF9;font-family:Arial,Helvetica,sans-serif;color:#1D1D1D">';
 
   primaryResults.forEach((d, di) => {
-    const el = document.getElementById("prEmailBody" + di);
-    if (!el) return;
-    emailHtml += '<div class="email-wrap">';
-    emailHtml += '<div class="email-hdr"><span class="name">' + d.dealer.name + '</span>';
-    emailHtml += '<span class="ct">' + d.allRecs.length + ' units | ' + (d.market || '') + '</span></div>';
-    emailHtml += '<div class="email-bdy">' + el.innerHTML + '</div></div>';
+    if (d.allRecs.length === 0) return;
+    const swCount = d.swUnits;
+    const qmCount = d.qmUnits;
+    const bodyParts = [];
+    if (swCount > 0) bodyParts.push(swCount + " Station Wagon");
+    if (qmCount > 0) bodyParts.push(qmCount + " Quartermaster");
+    const ms = d.bAvg > 0 ? Math.round(d.dealer.og / d.bAvg * 30) : 0;
+
+    // Outer card
+    emailHtml += '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:900px;width:900px;margin:0 auto 28px;background:#FFFFFF;border:1px solid #E3E1DC;border-radius:8px;overflow:hidden">';
+
+    // Header bar
+    emailHtml += '<tr><td style="padding:0">';
+    emailHtml += '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">';
+    emailHtml += '<tr><td bgcolor="#1D1D1D" style="padding:14px 20px;border-top:3px solid #FF4639">';
+    emailHtml += '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr>';
+    emailHtml += '<td style="font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:700;color:#FFFFFF">' + d.dealer.name + '</td>';
+    emailHtml += '<td align="right" style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#9F9F9F">' + d.allRecs.length + ' unit' + (d.allRecs.length !== 1 ? 's' : '') + ' | ' + (d.market || '') + '</td>';
+    emailHtml += '</tr></table></td></tr></table>';
+
+    // Body
+    emailHtml += '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">';
+    emailHtml += '<tr><td style="padding:20px 24px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.7;color:#1D1D1D">';
+
+    emailHtml += '<p style="margin:0 0 12px">Hi ' + d.dealer.name + ',</p>';
+    emailHtml += '<p style="margin:0 0 12px">Based on your sales performance, you\'ve earned <strong>' + d.allRecs.length + ' unit' + (d.allRecs.length !== 1 ? 's' : '') + '</strong> (' + bodyParts.join(", ") + ') for our <strong>' + monthYear + ' Primary Production Recommendation</strong>. Below are the recommended specifications for your upcoming production allocation.</p>';
+
+    // Metrics box
+    emailHtml += '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:12px 0"><tr><td bgcolor="#F7F6F4" style="padding:12px 14px;border:1px solid #E9E8E5;border-radius:6px;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#444">';
+    emailHtml += '<strong style="color:#1D1D1D">How Your Allocation Was Determined</strong><br>';
+    emailHtml += 'Your store\'s current metrics: <strong>' + ms + '-day supply</strong>, <strong>' + d.bAvg.toFixed(1) + ' avg monthly sales rate</strong>, and <strong>' + d.bSoN.toFixed(1) + '% share of nation</strong>.';
+    emailHtml += '</td></tr></table>';
+
+    emailHtml += '<p style="margin:12px 0">Please review the specifications below and <strong>place your orders in SAP</strong> accordingly. If you would like to adjust any specs before ordering, reach out to your RBM.</p>';
+
+    // Spec table
+    emailHtml += '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;font-size:11px;margin:14px 0">';
+    emailHtml += '<tr>';
+    const thStyle = 'padding:7px 6px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#fff;background:#1D1D1D;border-bottom:none';
+    ['#','Body','Trim','Ext Color','Interior','Roof','Frame','Wheels','Tyres','Safari','Tow'].forEach(h => {
+      emailHtml += '<th style="' + thStyle + '">' + h + '</th>';
+    });
+    emailHtml += '</tr>';
+
+    d.allRecs.forEach((r, vi) => {
+      const bg = vi % 2 === 0 ? '#FFFFFF' : '#FAFAF9';
+      emailHtml += '<tr>';
+      emailHtml += '<td bgcolor="' + bg + '" style="padding:5px 6px;font-weight:600;color:#FF4639;border-bottom:1px solid #eee">' + r.unit + '</td>';
+      emailHtml += '<td bgcolor="' + bg + '" style="padding:5px 6px;border-bottom:1px solid #eee">' + r.body + '</td>';
+      emailHtml += '<td bgcolor="' + bg + '" style="padding:5px 6px;border-bottom:1px solid #eee">' + r.trim + '</td>';
+      emailHtml += '<td bgcolor="' + bg + '" style="padding:5px 6px;border-bottom:1px solid #eee">' + (r.color || '') + '</td>';
+      emailHtml += '<td bgcolor="' + bg + '" style="padding:5px 6px;border-bottom:1px solid #eee">' + (r.seats || '') + '</td>';
+      emailHtml += '<td bgcolor="' + bg + '" style="padding:5px 6px;border-bottom:1px solid #eee">' + (r.roof || '') + '</td>';
+      emailHtml += '<td bgcolor="' + bg + '" style="padding:5px 6px;border-bottom:1px solid #eee">' + (r.frame || '') + '</td>';
+      emailHtml += '<td bgcolor="' + bg + '" style="padding:5px 6px;border-bottom:1px solid #eee">' + (r.wheels || '') + '</td>';
+      emailHtml += '<td bgcolor="' + bg + '" style="padding:5px 6px;border-bottom:1px solid #eee">' + (r.tyres || '') + '</td>';
+      emailHtml += '<td bgcolor="' + bg + '" style="padding:5px 6px;border-bottom:1px solid #eee">' + (r.safari || '') + '</td>';
+      emailHtml += '<td bgcolor="' + bg + '" style="padding:5px 6px;border-bottom:1px solid #eee">' + (r.tow || '') + '</td>';
+      emailHtml += '</tr>';
+    });
+    emailHtml += '</table>';
+
+    emailHtml += '<p style="margin:12px 0">Please place your orders in SAP by the deadline communicated by your RBM. Let me know if you have any questions.</p>';
+    emailHtml += '<p style="margin:12px 0">Best regards,<br><strong>' + sender + '</strong></p>';
+
+    emailHtml += '</td></tr></table>';
+
+    // Footer
+    emailHtml += '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr><td bgcolor="#FAFAF9" style="padding:10px 20px;border-top:1px solid #E3E1DC;font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#9F9F9F;text-align:center">';
+    emailHtml += monthYear + ' Primary Production Recommendation | INEOS Grenadier Americas';
+    emailHtml += '</td></tr></table>';
+
+    emailHtml += '</td></tr></table>'; // close outer card
   });
 
   emailHtml += '</body></html>';
