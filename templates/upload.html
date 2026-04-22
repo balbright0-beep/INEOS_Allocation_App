@@ -1,23 +1,24 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-variant="manual" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>INEOS Allocation Tool - Upload</title>
+  <link rel="stylesheet" href="https://ineos-americas-platform.onrender.com/ids.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Inter', system-ui, sans-serif; background: #FAFAF9; color: #1D1D1D; min-height: 100vh; display: flex; flex-direction: column; }
+    body { font-family: 'PPNeueMontreal', 'Inter', system-ui, sans-serif; background: #FAFAF9; color: #1D1D1D; min-height: 100vh; display: flex; flex-direction: column; }
     nav { background: #171717; color: #fff; padding: 16px 24px; display: flex; align-items: center; gap: 12px; }
-    .logo { width: 36px; height: 36px; background: #FF4639; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; }
-    .nav-title { font-size: 16px; font-weight: 600; }
-    .nav-sub { font-size: 11px; color: #9F9F9F; text-transform: uppercase; letter-spacing: 0.5px; }
+    .logo { width: 36px; height: 36px; background: #FF4639; border-radius: 0; display: flex; align-items: center; justify-content: center; font-family: 'Formula4x4','Arial Black',sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.04em; }
+    .nav-title { font-family: 'Formula4x4','Arial Black',sans-serif; font-size: 15px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+    .nav-sub { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #9F9F9F; text-transform: uppercase; letter-spacing: 0.18em; margin-top: 2px; }
     .nav-right { margin-left: auto; }
-    .nav-right a { color: #D9D7D0; text-decoration: none; font-size: 14px; }
+    .nav-right a { color: #D9D7D0; text-decoration: none; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; }
     .nav-right a:hover { color: #fff; }
     main { flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px 24px; }
-    .card { background: #fff; border: 1px solid #E9E8E5; border-radius: 12px; padding: 40px; max-width: 520px; width: 100%; }
-    h1 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+    .card { background: #fff; border: 1px solid #E9E8E5; border-radius: 0; padding: 40px; max-width: 520px; width: 100%; }
+    h1 { font-family: 'Formula4x4','Arial Black',sans-serif; font-size: 30px; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; margin-bottom: 8px; }
     .subtitle { color: #606060; font-size: 14px; margin-bottom: 28px; }
     .drop-zone { border: 2px dashed #D9D7D0; border-radius: 10px; padding: 48px 24px; text-align: center; cursor: pointer; transition: all 0.2s; }
     .drop-zone:hover, .drop-zone.dragover { border-color: #FF4639; background: #FFF5F4; }
